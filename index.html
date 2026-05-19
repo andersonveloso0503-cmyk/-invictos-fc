@@ -234,7 +234,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,0.
       <div class="fg"><label class="fl">Horário</label><input class="fi" id="wa-time" type="time"></div>
     </div>
     <div class="fg"><label class="fl">Local</label><input class="fi" id="wa-location" placeholder="Ex: Campo do Parque"></div>
-    <div class="fg"><label class="fl">Mensagem extra</label><input class="fi" id="wa-extra" placeholder="Ex: Levem colete azul"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">💰 Valor do Racha</label><input class="fi" id="wa-valor" type="number" min="0" step="5" placeholder="25"></div>
+      <div class="fg"><label class="fl">Mensagem extra</label><input class="fi" id="wa-extra" placeholder="Ex: Colete azul"></div>
+    </div>
     <button class="btn-wa" onclick="convocarWA()"><span style="font-size:1.1rem">📲</span> ENVIAR CONVOCAÇÃO</button>
   </div>
   <div class="sh"><h2>✅ LISTA DO JOGO</h2><div class="sl"></div></div>
@@ -799,11 +802,40 @@ function fmtDateWA(d){if(!d)return'';const[y,m,day]=d.split('-');const ms=['Jane
 
 window.convocarWA=function(){
   const op=document.getElementById('wa-opponent').value.trim();if(!op){showToast('Informe o adversário!');return;}
-  const dt=document.getElementById('wa-date').value;const tm=document.getElementById('wa-time').value;const lc=document.getElementById('wa-location').value.trim();const ex=document.getElementById('wa-extra').value.trim();
-  let msg=`⚔️ *CONVOCAÇÃO INVICTOS FC* ⚔️\n\n🏆 *Invictos FC vs ${op}*\n\n`;
-  if(dt)msg+=`📅 *Data:* ${fmtDateWA(dt)}\n`;if(tm)msg+=`🕐 *Horário:* ${tm}h\n`;if(lc)msg+=`📍 *Local:* ${lc}\n`;
-  msg+=`\n⚽ *CONFIRMEM PRESENÇA NO APP!*\n🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc\n`;
-  if(ex)msg+=`\n💬 ${ex}\n`;msg+=`\n🦁 _Invictos FC — Nunca Rendidos!_`;
+  const dt=document.getElementById('wa-date').value;
+  const tm=document.getElementById('wa-time').value;
+  const lc=document.getElementById('wa-location').value.trim();
+  const ex=document.getElementById('wa-extra').value.trim();
+  const valor=document.getElementById('wa-valor').value.trim();
+
+  // Build confirmed players list
+  const confirmed=cache.players.filter(p=>cache.confirmed.includes(p.id));
+
+  // Build numbered list 1-17
+  let lista='';
+  for(let i=1;i<=17;i++){
+    const p=confirmed[i-1];
+    if(p){
+      lista+=`${i}. ${p.nick||p.name} ✅\n`;
+    } else {
+      lista+=`${i}. \n`;
+    }
+  }
+
+  let msg=`⚔️ *INVICTOS FC — CONVOCAÇÃO* ⚔️\n\n`;
+  msg+=`🏆 *Invictos FC vs ${op}*\n`;
+  if(dt)msg+=`📅 ${fmtDateWA(dt)}`;
+  if(tm)msg+=` · 🕐 ${tm}h`;
+  if(dt||tm)msg+='\n';
+  if(lc)msg+=`📍 ${lc}\n`;
+  msg+=`💰 *Valor: R$ ${valor||'25'},00*\n`;
+  msg+=`👕 *Não esqueça o uniforme!*\n`;
+  msg+=`\n✅ *LISTA DO JOGO:*\n`;
+  msg+=lista;
+  msg+=`\n⚽ _Coloque seu nome ao lado do número!_\n`;
+  if(ex)msg+=`\n💬 ${ex}\n`;
+  msg+=`\n🦁 *Invictos FC — Nunca Rendidos!*`;
+
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
 };
 
