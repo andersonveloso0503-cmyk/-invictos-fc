@@ -666,8 +666,9 @@ function renderHome(){
 }
 
 // ===== GAME DETAIL MODAL =====
-window.openGameDetail=function(id){
-  var g=cache.games.find(function(x){return x.id===id;});if(!g)return;
+window.openGameDetail=function(gid){
+  var g=cache.games.find(function(x){return x.id===gid;});if(!g)return;
+  window._currentGameId=gid;
   var liveStatus=getGameStatus(g);
   var isLive=liveStatus==='live';
   var isPast=g.status!=='agendado';
@@ -675,49 +676,66 @@ window.openGameDetail=function(id){
   var absentPlayers=cache.players.filter(function(p){return cache.absent.includes(p.id);});
   var scoreHTML='';
   if(isAdmin&&(g.status==='agendado'||isLive)){
-    var selOpts=['agendado','vitoria','empate','derrota'].map(function(v){return '<option value="'+v+'"'+(g.status===v?' selected':'')+'>'+v.charAt(0).toUpperCase()+v.slice(1)+'</option>';}).join('');
+    var selOpts=['agendado','vitoria','empate','derrota'].map(function(v){
+      return '<option value="'+v+'"'+(g.status===v?' selected':'')+'>'+v.charAt(0).toUpperCase()+v.slice(1)+'</option>';
+    }).join('');
     scoreHTML='<div style="margin:12px 0">'
       +'<div class="fl" style="text-align:center;margin-bottom:6px">'+(isLive?'PLACAR AO VIVO':'REGISTRAR PLACAR')+'</div>'
       +'<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0">'
-      +'<div style="text-align:center"><div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">INVICTOS</div>'
-      +'<div style="display:flex;align-items:center;gap:6px">'
-      +'<button class="score-btn" onclick="adjScore(''+id+'','us',-1)">-</button>'
-      +'<div class="gd-score-big" id="sd-us">'+(g.liveUs||0)+'</div>'
-      +'<button class="score-btn" onclick="adjScore(''+id+'','us',1)">+</button></div></div>'
-      +'<div style="font-family:Cinzel,serif;font-size:1.5rem;color:var(--tm)">x</div>'
-      +'<div style="text-align:center"><div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">'+g.opponent.toUpperCase()+'</div>'
-      +'<div style="display:flex;align-items:center;gap:6px">'
-      +'<button class="score-btn" onclick="adjScore(''+id+'','them',-1)">-</button>'
-      +'<div class="gd-score-big" id="sd-them">'+(g.liveThem||0)+'</div>'
-      +'<button class="score-btn" onclick="adjScore(''+id+'','them',1)">+</button></div></div></div>'
+        +'<div style="text-align:center">'
+          +'<div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">INVICTOS</div>'
+          +'<div style="display:flex;align-items:center;gap:6px">'
+            +'<button class="score-btn" onclick="adjScoreUs(-1)">-</button>'
+            +'<div class="gd-score-big" id="sd-us">'+(g.liveUs||0)+'</div>'
+            +'<button class="score-btn" onclick="adjScoreUs(1)">+</button>'
+          +'</div>'
+        +'</div>'
+        +'<div style="font-family:Cinzel,serif;font-size:1.5rem;color:var(--tm)">x</div>'
+        +'<div style="text-align:center">'
+          +'<div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">'+g.opponent.toUpperCase()+'</div>'
+          +'<div style="display:flex;align-items:center;gap:6px">'
+            +'<button class="score-btn" onclick="adjScoreThem(-1)">-</button>'
+            +'<div class="gd-score-big" id="sd-them">'+(g.liveThem||0)+'</div>'
+            +'<button class="score-btn" onclick="adjScoreThem(1)">+</button>'
+          +'</div>'
+        +'</div>'
+      +'</div>'
       +'<div class="fg"><label class="fl">Goleadores</label><input class="fi" id="gd-scorers" value="'+(g.scorers||'')+'" placeholder="Joao 2, Pedro 1"></div>'
       +'<div class="fg"><label class="fl">Assistencias</label><input class="fi" id="gd-assists" value="'+(g.assists||'')+'" placeholder="Lucas 1"></div>'
       +'<div class="fg"><label class="fl">Resultado</label><select class="fsel" id="gd-status">'+selOpts+'</select></div>'
-      +'<button class="btn-sub" onclick="saveGameDetail(''+id+'')">SALVAR</button></div>';
+      +'<button class="btn-sub" onclick="saveGameDetail(window._currentGameId)">SALVAR</button>'
+      +'</div>';
   }else if(isPast){
     var sl=statusLabel(g.status);
     scoreHTML='<div style="text-align:center;padding:10px 0">'
       +'<div style="display:flex;align-items:center;justify-content:center;gap:16px">'
-      +'<div style="text-align:center"><div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">INVICTOS</div><div style="font-family:Cinzel,serif;font-size:2.8rem;font-weight:900;color:var(--gb)">'+g.goalsUs+'</div></div>'
-      +'<div style="font-family:Cinzel,serif;font-size:1.5rem;color:var(--tm)">x</div>'
-      +'<div style="text-align:center"><div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">'+g.opponent.toUpperCase()+'</div><div style="font-family:Cinzel,serif;font-size:2.8rem;font-weight:900;color:var(--gb)">'+g.goalsThem+'</div></div></div>'
-      +'<span class="gs '+sl[1]+'" style="padding:4px 12px">'+sl[0]+'</span></div>';
+        +'<div style="text-align:center"><div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">INVICTOS</div><div style="font-family:Cinzel,serif;font-size:2.8rem;font-weight:900;color:var(--gb)">'+g.goalsUs+'</div></div>'
+        +'<div style="font-family:Cinzel,serif;font-size:1.5rem;color:var(--tm)">x</div>'
+        +'<div style="text-align:center"><div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">'+g.opponent.toUpperCase()+'</div><div style="font-family:Cinzel,serif;font-size:2.8rem;font-weight:900;color:var(--gb)">'+g.goalsThem+'</div></div>'
+      +'</div>'
+      +'<span class="gs '+sl[1]+'" style="padding:4px 12px">'+sl[0]+'</span>'
+      +'</div>';
   }
   var locHTML=g.location?'<div style="font-size:.72rem;color:var(--tm);margin-bottom:10px">Local: '+g.location+'</div>':'';
   var scHTML=g.scorers?'<div class="ginf" style="margin-top:8px">Gols: <span>'+g.scorers+'</span></div>':'';
   var asHTML=g.assists?'<div class="ginf">Ass.: <span>'+g.assists+'</span></div>':'';
   var confHTML='';
   if(confPlayers.length>0){
-    var chips=confPlayers.map(function(p){var pav=p.photo?'<img src="'+p.photo+'" style="width:18px;height:18px;border-radius:50%;object-fit:cover">':('<span>'+(p.emoji||'?')+'</span>');return'<div class="conf-chip">'+pav+(p.nick||p.name.split(' ')[0])+'</div>';}).join('');
+    var chips=confPlayers.map(function(p){
+      var pav=p.photo?'<img src="'+p.photo+'" style="width:18px;height:18px;border-radius:50%;object-fit:cover">':('<span>'+(p.emoji||'?')+'</span>');
+      return '<div class="conf-chip">'+pav+(p.nick||p.name.split(' ')[0])+'</div>';
+    }).join('');
     confHTML='<div style="margin-top:12px"><div class="fl" style="margin-bottom:6px">CONFIRMADOS ('+confPlayers.length+')</div><div style="display:flex;flex-wrap:wrap">'+chips+'</div></div>';
   }
   var absHTML='';
   if(absentPlayers.length>0){
-    var achips=absentPlayers.map(function(p){return'<div class="abs-chip">'+(p.nick||p.name.split(' ')[0])+'</div>';}).join('');
+    var achips=absentPlayers.map(function(p){return '<div class="abs-chip">'+(p.nick||p.name.split(' ')[0])+'</div>';}).join('');
     absHTML='<div style="margin-top:8px"><div class="fl" style="margin-bottom:6px">AUSENTES ('+absentPlayers.length+')</div><div style="display:flex;flex-wrap:wrap">'+achips+'</div></div>';
   }
-  var waAfter=isLive&&isAdmin?'<button class="btn-wa" style="margin-top:10px" onclick="sendPostGameWA(''+id+'')">Enviar pedido de notas ao grupo</button>':'';
-  document.getElementById('gameDetailContent').innerHTML='<div class="mt2" style="margin-bottom:8px">'+g.opponent+' - '+fmtDate(g.date)+'</div>'+locHTML+scoreHTML+scHTML+asHTML+confHTML+absHTML+waAfter;
+  var waBtn=isLive&&isAdmin?'<button class="btn-wa" style="margin-top:10px" onclick="sendPostGameWA(window._currentGameId)">Enviar pedido de notas</button>':'';
+  document.getElementById('gameDetailContent').innerHTML=
+    '<div class="mt2" style="margin-bottom:8px">'+g.opponent+' - '+fmtDate(g.date)+'</div>'
+    +locHTML+scoreHTML+scHTML+asHTML+confHTML+absHTML+waBtn;
   openModal('gameDetail');
 };
 
@@ -800,7 +818,7 @@ function gameCardHTML(g,showDel){
   var scHTML=g.scorers?'<div class="ginf">Gols: <span>'+g.scorers+'</span></div>':'';
   var asHTML=g.assists?'<div class="ginf">Ass.: <span>'+g.assists+'</span></div>':'';
   var notesHTML=g.notes?'<div class="ginf">'+g.notes+'</div>':'';
-  var delHTML=showDel?'<button class="del-btn admin-only" onclick="deleteGame(''+g.id+'')">X</button>':'';
+  var delHTML=showDel?'<button class="del-btn admin-only" data-gid="'+g.id+'" onclick="deleteGame(this.dataset.gid)">X</button>':'';
   return '<div class="gc">'
     +'<div class="gh"><div class="gd2">'+fmtDate(g.date)+(g.time?' - '+g.time:'')+'</div><div class="gs '+cls+'">'+label+'</div></div>'
     +'<div class="gsr"><div class="gt">Invictos FC</div><div class="gsc">'+scoreHTML+'</div><div class="gt r">'+g.opponent+'</div></div>'
@@ -853,7 +871,7 @@ function renderPlayers(){
   grid.innerHTML=cache.players.map(function(p){
     var s=getStats(p.name);
     var av=p.photo?'<img src="'+p.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':('<span class="ea">'+(p.emoji||'?')+'</span>');
-    return '<div class="pc" onclick="showPlayerDetail(\'' + p.id + '\')">' + '<div class="pnum">N '+( p.number||'?')+'</div>'
+    return '<div class="pc" data-id="'+p.id+'" onclick="showPlayerDetail(this.closest(\'[data-id]\').dataset.id)">' + '<div class="pnum">N '+( p.number||'?')+'</div>'
       +'<div class="ppw">'+av+'</div>'
       +'<div class="pname">'+(p.nick||p.name)+'</div>'
       +'<div class="ppos">'+(p.pos||'-')+'</div>'
@@ -882,26 +900,33 @@ window.savePlayer=async function(){
   showSync(false);
 };
 
-window.showPlayerDetail=function(id){
-  var p=cache.players.find(function(x){return x.id===id;});if(!p)return;
+window.showPlayerDetail=function(pid){
+  window._currentPlayerId=pid;
+  var p=cache.players.find(function(x){return x.id===pid;});if(!p)return;
   var s=getStats(p.name);
   var av=p.photo?'<img src="'+p.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">':('<span style="font-size:1.9rem">'+(p.emoji||'?')+'</span>');
   var nickHTML=p.nick?'<div style="color:var(--g);font-size:.78rem">"'+p.nick+'"</div>':'';
   var gj=s.games>0?Math.round((s.goals/s.games)*10)/10:0;
-  var statsHTML='<div style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:8px 4px;text-align:center"><div style="font-family:Cinzel,serif;font-size:1.25rem;color:var(--gb)">'+s.goals+'</div><div style="font-size:.52rem;color:var(--tm)">GOLS</div></div>'
+  var statsHTML=''
+    +'<div style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:8px 4px;text-align:center"><div style="font-family:Cinzel,serif;font-size:1.25rem;color:var(--gb)">'+s.goals+'</div><div style="font-size:.52rem;color:var(--tm)">GOLS</div></div>'
     +'<div style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:8px 4px;text-align:center"><div style="font-family:Cinzel,serif;font-size:1.25rem;color:var(--gb)">'+s.assists+'</div><div style="font-size:.52rem;color:var(--tm)">ASS.</div></div>'
     +'<div style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:8px 4px;text-align:center"><div style="font-family:Cinzel,serif;font-size:1.25rem;color:var(--gb)">'+s.games+'</div><div style="font-size:.52rem;color:var(--tm)">JOGOS</div></div>'
     +'<div style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:8px 4px;text-align:center"><div style="font-family:Cinzel,serif;font-size:1.25rem;color:var(--gb)">'+gj+'</div><div style="font-size:.52rem;color:var(--tm)">G/J</div></div>';
+  var delBtn=isAdmin?'<button class="btn-can" style="color:#F87171;border-color:rgba(239,68,68,.3)" onclick="deletePlayer(window._currentPlayerId)">Remover Jogador</button>':'';
   document.getElementById('playerDetailContent').innerHTML=
     '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'
-    +'<div class="ppw" style="width:66px;height:66px;flex-shrink:0;border:3px solid var(--g);cursor:pointer" onclick="document.getElementById('pPhotoEdit').click()">'+av+'</div>'
-    +'<div><div style="font-family:Cinzel,serif;font-size:1.1rem;font-weight:700;color:var(--gb)">'+p.name+'</div>'+nickHTML
-    +'<div style="color:var(--tm);font-size:.7rem;margin-top:1px">'+(p.pos||'-')+' N '+(p.number||'?')+'</div>'
-    +'<div style="font-size:.58rem;color:var(--tm);margin-top:1px">Toque na foto para trocar</div></div></div>'
-    +'<input type="file" id="pPhotoEdit" accept="image/*" style="display:none" onchange="editPlayerPhoto(event,''+id+''+')">'
+      +'<div class="ppw" style="width:66px;height:66px;flex-shrink:0;border:3px solid var(--g);cursor:pointer" onclick="document.getElementById(&quot;pPhotoEdit&quot;).click()">'+av+'</div>'
+      +'<div>'
+        +'<div style="font-family:Cinzel,serif;font-size:1.1rem;font-weight:700;color:var(--gb)">'+p.name+'</div>'
+        +nickHTML
+        +'<div style="color:var(--tm);font-size:.7rem;margin-top:1px">'+(p.pos||'-')+' N '+(p.number||'?')+'</div>'
+        +'<div style="font-size:.58rem;color:var(--tm);margin-top:1px">Toque na foto para trocar</div>'
+      +'</div>'
+    +'</div>'
+    +'<input type="file" id="pPhotoEdit" accept="image/*" style="display:none" onchange="editPlayerPhoto(event,window._currentPlayerId)">'
     +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">'+statsHTML+'</div>'
-    +(isAdmin?'<button class="btn-can" style="color:#F87171;border-color:rgba(239,68,68,.3)" onclick="deletePlayer(''+id+'')">Remover Jogador</button>':'');
-  renderPlayerPhotos(id);
+    +delBtn;
+  renderPlayerPhotos(pid);
   openModal('playerDetail');
 };
 
@@ -1031,8 +1056,8 @@ function renderConfirmList(){
     var cls=isConf?'conf':isAbsent?'absent':'';
     var ck=isConf?'V':isAbsent?'X':'';
     var badge=isConf?'<span style="font-size:.65rem;color:#4ADE80">CONFIRMADO</span>':isAbsent?'<span style="font-size:.65rem;color:#F87171">AUSENTE</span>':'';
-    var fn=isLive?'':"toggleConf('"+p.id+"')";
-    return '<div class="ci '+cls+'" onclick="'+fn+'" style="'+(isLive?'cursor:default;':'')+'">'
+    var fn=isLive?'':'toggleConf(this.dataset.pid)'; var dpid=p.id;
+    return '<div class="ci '+cls+'" data-pid="'+p.id+'" onclick="'+fn+'" style="'+(isLive?'cursor:default;':'')+'">'
       +'<div class="cck">'+ck+'</div>'+av
       +'<div style="flex:1"><div class="cname">'+(p.nick||p.name)+'</div><div class="cpos">'+(p.pos||'-')+'</div></div>'
       +badge+'</div>';
@@ -1040,7 +1065,7 @@ function renderConfirmList(){
   el.innerHTML=html;
 }
 
-window.toggleConf=async function(pid){
+window.toggleConf=async function(pid){if(pid&&pid.dataset)pid=pid.dataset.pid;
   const isConf=cache.confirmed.includes(pid);
   const isAbsent=cache.absent.includes(pid);
   try{
@@ -1067,27 +1092,25 @@ window.limparConf=async function(){
 };
 
 window.compartilharLista=function(){
-  const conf=cache.players.filter(p=>cache.confirmed.includes(p.id));
-  if(conf.length===0){showToast('Nenhum jogador confirmado!');return;}
-  const dt=document.getElementById('wa-date').value;const tm=document.getElementById('wa-time').value;const lc=document.getElementById('wa-location').value.trim();
-  const gols=conf.filter(p=>p.pos==='Goleiro');const out=conf.filter(p=>p.pos!=='Goleiro');
-  let msg=`✅ *LISTA DO JOGO — INVICTOS FC* ✅
-`;
-  if(dt)msg+=`📅 ${fmtDateWA(dt)}`;if(tm)msg+=` às ${tm}h`;if(dt||tm)msg+='
-';if(lc)msg+=`📍 ${lc}
-`;
-  msg+=`
-🧤 *GOLEIROS (${gols.length}):*
-`;gols.forEach((p,i)=>msg+=`${i+1}. ${p.nick||p.name}
-`);
-  msg+=`
-⚽ *JOGADORES (${out.length}):*
-`;out.forEach((p,i)=>msg+=`${i+1}. ${p.nick||p.name}
-`);
-  msg+=`
-👥 *Total: ${conf.length} confirmados*
-🦁 _Invictos FC — Nunca Rendidos!_`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+  var conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
+  if(conf.length===0){showToast('Nenhum confirmado!');return;}
+  var dt=document.getElementById('wa-date').value;
+  var tm=document.getElementById('wa-time').value;
+  var lc=document.getElementById('wa-location').value.trim();
+  var gols=conf.filter(function(p){return p.pos==='Goleiro';});
+  var out=conf.filter(function(p){return p.pos!=='Goleiro';});
+  var nl='\n';
+  var msg='LISTA DO JOGO - INVICTOS FC'+nl;
+  if(dt)msg+=fmtDateWA(dt);
+  if(tm)msg+=' as '+tm+'h';
+  if(dt||tm)msg+=nl;
+  if(lc)msg+=lc+nl;
+  msg+=nl+'GOLEIROS ('+gols.length+'):'+nl;
+  gols.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
+  msg+=nl+'JOGADORES ('+out.length+'):'+nl;
+  out.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
+  msg+=nl+'Total: '+conf.length+' confirmado'+(conf.length!==1?'s':'');
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
 window.convocarWA=function(){
@@ -1099,72 +1122,25 @@ window.convocarWA=function(){
   var ex=document.getElementById('wa-extra').value.trim();
   var valor=document.getElementById('wa-valor').value.trim();
   var confirmed=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
+  var nl='\n';
   var lista='';
   for(var i=1;i<=17;i++){
     var p=confirmed[i-1];
-    lista+=(i)+'. '+(p?((p.nick||p.name)+' OK'):'')+'
-';
+    lista+=(i)+'. '+(p?(p.nick||p.name)+' OK':'')+nl;
   }
-  var msg='INVICTOS FC - CONVOCACAO
-
-';
-  msg+='Invictos FC vs '+op+'
-';
+  var msg='INVICTOS FC - CONVOCACAO'+nl+nl;
+  msg+='Invictos FC vs '+op+nl;
   if(dt)msg+=fmtDateWA(dt);
   if(tm)msg+=' as '+tm+'h';
-  if(dt||tm)msg+='
-';
-  if(lc)msg+=lc+'
-';
-  msg+='Valor: R$ '+(valor||'25')+',00
-';
-  msg+='Nao esqueca o uniforme!
-
-';
-  msg+='LISTA DO JOGO:
-'+lista;
-  msg+='
-Coloque seu nome ao lado do numero!
-';
-  msg+='
-App: https://andersonveloso0503-cmyk.github.io/-invictos-fc
-';
-  if(ex)msg+='
-'+ex+'
-';
-  msg+='
-Invictos FC - Nunca Rendidos!';
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-};
-
-window.compartilharLista=function(){
-  var conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
-  if(conf.length===0){showToast('Nenhum jogador confirmado!');return;}
-  var dt=document.getElementById('wa-date').value;
-  var tm=document.getElementById('wa-time').value;
-  var lc=document.getElementById('wa-location').value.trim();
-  var gols=conf.filter(function(p){return p.pos==='Goleiro';});
-  var out=conf.filter(function(p){return p.pos!=='Goleiro';});
-  var msg='LISTA DO JOGO - INVICTOS FC
-';
-  if(dt)msg+=fmtDateWA(dt);
-  if(tm)msg+=' as '+tm+'h';
-  if(dt||tm)msg+='
-';
-  if(lc)msg+=lc+'
-';
-  msg+='
-GOLEIROS ('+gols.length+'):
-';
-  gols.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+'
-';});
-  msg+='
-JOGADORES ('+out.length+'):
-';
-  out.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+'
-';});
-  msg+='
-Total: '+conf.length+' confirmado'+(conf.length!==1?'s':'');
+  if(dt||tm)msg+=nl;
+  if(lc)msg+=lc+nl;
+  msg+='Valor: R$ '+(valor||'25')+',00'+nl;
+  msg+='Nao esqueca o uniforme!'+nl+nl;
+  msg+='LISTA DO JOGO:'+nl+lista;
+  msg+=nl+'Coloque seu nome ao lado do numero!'+nl;
+  msg+=nl+'App: https://andersonveloso0503-cmyk.github.io/-invictos-fc'+nl;
+  if(ex)msg+=nl+ex+nl;
+  msg+=nl+'Invictos FC - Nunca Rendidos!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
@@ -1203,7 +1179,7 @@ function renderConfratList(){
       photosStr='<div style="font-size:.62rem;color:var(--tm);margin-bottom:5px;margin-top:8px;">'+c.photos.length+' foto(s)</div>'
         +'<div class="pgrid">'+c.photos.map(function(ph){return'<div class="phi" data-src="'+ph+'" onclick="openFull(this)"><img src="'+ph+'" alt=""><div class="pho">+</div></div>';}).join('')+'</div>';
     }
-    var delBtn=isAdmin?'<button class="del-btn admin-only" onclick="deleteConfrat(''+c.id+'')">X</button>':'';
+    var delBtn=isAdmin?'<button class="del-btn admin-only" onclick="deleteConfrat(window._ccid)" data-cid="'+c.id+'" onmousedown="window._ccid=this.dataset.cid">X</button>':'';
     return '<div class="cf-card">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px">'
       +'<div><div style="font-family:Cinzel,serif;font-size:.95rem;color:var(--gb);font-weight:700">'+c.name+'</div>'
@@ -1456,81 +1432,6 @@ async function seedGames(){
     {id:'h146',opponent:'Mocidade',date:'2022-03-12',time:'14:00',location:'Leo Bertaco',status:'derrota',goalsUs:2,goalsThem:7,scorers:'',assists:'',notes:'2022'},
     {id:'h147',opponent:'Amigos da Vila',date:'2022-01-20',time:'21:00',location:'Renato Bertaco',status:'derrota',goalsUs:5,goalsThem:6,scorers:'',assists:'',notes:'2022'},
     {id:'h148',opponent:'Estrela',date:'2022-01-13',time:'21:00',location:'Renato',status:'vitoria',goalsUs:5,goalsThem:3,scorers:'',assists:'',notes:'2022'},
-    {id:'h149',opponent:'União',date:'2020-12-11',time:'16:00',location:'Casa',status:'vitoria',goalsUs:3,goalsThem:1,scorers:'',assists:'',notes:'2020'},
-    {id:'h150',opponent:'Mocidade',date:'2020-12-04',time:'15:00',location:'Casa',status:'empate',goalsUs:3,goalsThem:3,scorers:'',assists:'',notes:'2020'},
-    {id:'h151',opponent:'Colo Colo',date:'2020-11-27',time:'16:00',location:'Casa',status:'empate',goalsUs:2,goalsThem:2,scorers:'',assists:'',notes:'2020'},
-    {id:'h152',opponent:'AEPJ',date:'2020-11-20',time:'16:00',location:'Casa',status:'derrota',goalsUs:1,goalsThem:6,scorers:'',assists:'',notes:'2020'},
-    {id:'h153',opponent:'Sojão',date:'2020-11-06',time:'16:00',location:'Casa',status:'derrota',goalsUs:1,goalsThem:4,scorers:'',assists:'',notes:'2020'},
-    {id:'h154',opponent:'AFCEEE',date:'2020-10-30',time:'16:00',location:'Casa',status:'derrota',goalsUs:0,goalsThem:5,scorers:'',assists:'',notes:'2020'},
-    {id:'h155',opponent:'Futsamba',date:'2020-10-23',time:'16:00',location:'Casa',status:'empate',goalsUs:2,goalsThem:2,scorers:'',assists:'',notes:'2020'},
-    {id:'h156',opponent:'Ideal',date:'2020-10-16',time:'16:00',location:'Casa',status:'vitoria',goalsUs:7,goalsThem:4,scorers:'',assists:'',notes:'2020'},
-    {id:'h157',opponent:'Monte Cristo',date:'2020-10-09',time:'16:00',location:'Casa',status:'vitoria',goalsUs:5,goalsThem:4,scorers:'',assists:'',notes:'2020'},
-    {id:'h158',opponent:'Locomotiv',date:'2020-10-02',time:'16:00',location:'Casa',status:'derrota',goalsUs:1,goalsThem:6,scorers:'',assists:'',notes:'2020'},
-    {id:'h159',opponent:'Sajac',date:'2020-09-25',time:'16:00',location:'Casa',status:'vitoria',goalsUs:4,goalsThem:1,scorers:'',assists:'',notes:'2020'},
-    {id:'h160',opponent:'Baronense',date:'2020-09-11',time:'16:00',location:'Casa',status:'vitoria',goalsUs:3,goalsThem:2,scorers:'',assists:'',notes:'2020'},
-    {id:'h161',opponent:'XX Novembro',date:'2020-09-04',time:'14:00',location:'JK Esportes',status:'vitoria',goalsUs:6,goalsThem:3,scorers:'',assists:'',notes:'2020'},
-    {id:'h162',opponent:'Sajac',date:'2020-08-28',time:'15:30',location:'Casa',status:'derrota',goalsUs:2,goalsThem:5,scorers:'',assists:'',notes:'2020'},
-    {id:'h163',opponent:'Baronence',date:'2020-08-14',time:'15:30',location:'Leo Bertaco',status:'vitoria',goalsUs:4,goalsThem:1,scorers:'',assists:'',notes:'2020'},
-    {id:'h164',opponent:'Carris',date:'2020-08-07',time:'15:30',location:'Leo Bertaco',status:'vitoria',goalsUs:3,goalsThem:2,scorers:'',assists:'',notes:'2020'},
-    {id:'h165',opponent:'Das Antigas',date:'2020-07-31',time:'14:00',location:'Lami',status:'derrota',goalsUs:1,goalsThem:5,scorers:'',assists:'',notes:'2020'},
-    {id:'h166',opponent:'Da Lama',date:'2020-07-24',time:'15:00',location:'Leo Bertaco',status:'derrota',goalsUs:3,goalsThem:5,scorers:'',assists:'',notes:'2020'},
-    {id:'h167',opponent:'M Libano',date:'2020-07-17',time:'15:30',location:'Leo Bertaco',status:'vitoria',goalsUs:5,goalsThem:1,scorers:'',assists:'',notes:'2020'},
-    {id:'h168',opponent:'1 Real',date:'2020-07-10',time:'14:00',location:'Leo Bertaco',status:'derrota',goalsUs:1,goalsThem:6,scorers:'',assists:'',notes:'2020'},
-    {id:'h169',opponent:'Papão',date:'2020-07-03',time:'15:30',location:'Leo Bertaco',status:'empate',goalsUs:4,goalsThem:4,scorers:'',assists:'',notes:'2020'},
-    {id:'h170',opponent:'DINAMO',date:'2020-06-12',time:'15:30',location:'Leo Bertaco',status:'derrota',goalsUs:1,goalsThem:4,scorers:'',assists:'',notes:'2020'},
-    {id:'h171',opponent:'Das Antigas',date:'2020-06-05',time:'15:00',location:'Lami',status:'derrota',goalsUs:2,goalsThem:4,scorers:'',assists:'',notes:'2020'},
-    {id:'h172',opponent:'Vitória',date:'2020-02-06',time:'16:00',location:'Lami',status:'derrota',goalsUs:1,goalsThem:3,scorers:'',assists:'',notes:'2020'},
-    {id:'h173',opponent:'NAPOLIS',date:'2019-12-05',time:'16:00',location:'Lami',status:'empate',goalsUs:4,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h174',opponent:'Ideal FC',date:'2019-11-28',time:'16:00',location:'Casa',status:'vitoria',goalsUs:6,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h175',opponent:'Tomoio',date:'2019-11-21',time:'16:00',location:'Viamão',status:'vitoria',goalsUs:6,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h176',opponent:'Amapá',date:'2019-11-14',time:'16:00',location:'Casa',status:'derrota',goalsUs:2,goalsThem:3,scorers:'',assists:'',notes:'2019'},
-    {id:'h177',opponent:'MCFC',date:'2019-11-07',time:'16:00',location:'JK',status:'derrota',goalsUs:2,goalsThem:8,scorers:'',assists:'',notes:'2019'},
-    {id:'h178',opponent:'JDN FC',date:'2019-10-31',time:'16:00',location:'Leo',status:'vitoria',goalsUs:8,goalsThem:3,scorers:'',assists:'',notes:'2019'},
-    {id:'h179',opponent:'Sambo',date:'2019-10-24',time:'16:00',location:'Lami',status:'derrota',goalsUs:1,goalsThem:3,scorers:'',assists:'',notes:'2019'},
-    {id:'h180',opponent:'Amapá',date:'2019-10-17',time:'12:00',location:'JK Sportes',status:'vitoria',goalsUs:4,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h181',opponent:'Da Lama',date:'2019-10-10',time:'16:00',location:'Casa',status:'derrota',goalsUs:3,goalsThem:5,scorers:'',assists:'',notes:'2019'},
-    {id:'h182',opponent:'Napoli',date:'2019-09-26',time:'14:00',location:'Lami',status:'empate',goalsUs:1,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h183',opponent:'Vet. F. Arte',date:'2019-03-14',time:'16:00',location:'Casa',status:'vitoria',goalsUs:6,goalsThem:5,scorers:'',assists:'',notes:'2019'},
-    {id:'h184',opponent:'Papão',date:'2019-03-07',time:'16:00',location:'Casa',status:'derrota',goalsUs:1,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h185',opponent:'Vibração',date:'2019-12-07',time:'16:00',location:'Leo Bertaco',status:'vitoria',goalsUs:4,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h186',opponent:'PFC',date:'2019-11-30',time:'16:00',location:'Lami',status:'vitoria',goalsUs:6,goalsThem:3,scorers:'',assists:'',notes:'2019'},
-    {id:'h187',opponent:'União Viamão',date:'2019-11-23',time:'16:00',location:'Leo Bertaco',status:'derrota',goalsUs:4,goalsThem:8,scorers:'',assists:'',notes:'2019'},
-    {id:'h188',opponent:'AEPJ',date:'2019-11-09',time:'16:00',location:'Leo Bertaco',status:'vitoria',goalsUs:6,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h189',opponent:'Locomotiv FC',date:'2019-11-02',time:'16:00',location:'Leo Bertaco',status:'vitoria',goalsUs:3,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h190',opponent:'MCFC',date:'2019-10-26',time:'16:00',location:'Leo Bertaco',status:'derrota',goalsUs:1,goalsThem:6,scorers:'',assists:'',notes:'2019'},
-    {id:'h191',opponent:'Bohemios',date:'2019-10-19',time:'16:00',location:'Leo',status:'vitoria',goalsUs:6,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h192',opponent:'Galera FC',date:'2019-10-12',time:'16:00',location:'Leo',status:'empate',goalsUs:5,goalsThem:5,scorers:'',assists:'',notes:'2019'},
-    {id:'h193',opponent:'Afepucrs',date:'2019-10-04',time:'19:00',location:'Estádio PUC',status:'derrota',goalsUs:4,goalsThem:5,scorers:'',assists:'',notes:'2019'},
-    {id:'h194',opponent:'Barca dos Amigos',date:'2019-09-28',time:'16:00',location:'Leo Bertaco',status:'derrota',goalsUs:2,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h195',opponent:'Galera FC',date:'2019-09-21',time:'14:00',location:'Riograndense',status:'derrota',goalsUs:1,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h196',opponent:'Ypu',date:'2019-09-14',time:'15:30',location:'Casa',status:'vitoria',goalsUs:6,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h197',opponent:'Barcelona',date:'2019-09-07',time:'14:00',location:'Lami',status:'vitoria',goalsUs:2,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h198',opponent:'Copa',date:'2019-08-24',time:'10:00',location:'JK Sportes',status:'empate',goalsUs:2,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h199',opponent:'Dinamite',date:'2019-08-17',time:'15:30',location:'Casa',status:'derrota',goalsUs:1,goalsThem:3,scorers:'',assists:'',notes:'2019'},
-    {id:'h200',opponent:'Êxito',date:'2019-08-10',time:'15:00',location:'Arena Cape Viamão',status:'vitoria',goalsUs:3,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h201',opponent:'AEPJ',date:'2019-08-03',time:'15:30',location:'Casa',status:'derrota',goalsUs:3,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h202',opponent:'Copa',date:'2019-07-27',time:'14:00',location:'JK',status:'derrota',goalsUs:1,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h203',opponent:'União',date:'2019-07-20',time:'15:00',location:'Viamão',status:'empate',goalsUs:1,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h204',opponent:'AEPJ',date:'2019-07-13',time:'15:30',location:'Bertaco',status:'derrota',goalsUs:4,goalsThem:5,scorers:'',assists:'',notes:'2019'},
-    {id:'h205',opponent:'Manchester',date:'2019-07-06',time:'14:30',location:'Arena Progresso 3',status:'derrota',goalsUs:2,goalsThem:6,scorers:'',assists:'',notes:'2019'},
-    {id:'h206',opponent:'Da Lama',date:'2019-06-29',time:'15:30',location:'Bertaco',status:'derrota',goalsUs:1,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h207',opponent:'Cacique FC',date:'2019-06-22',time:'15:30',location:'Bertaco',status:'empate',goalsUs:4,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h208',opponent:'ACPJ',date:'2019-06-15',time:'15:30',location:'Bertaco',status:'empate',goalsUs:2,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h209',opponent:'Êxito',date:'2019-06-08',time:'15:30',location:'Leo',status:'vitoria',goalsUs:1,goalsThem:0,scorers:'',assists:'',notes:'2019'},
-    {id:'h210',opponent:'Argentino Jr',date:'2019-06-01',time:'15:00',location:'Arena Progresso',status:'derrota',goalsUs:2,goalsThem:5,scorers:'',assists:'',notes:'2019'},
-    {id:'h211',opponent:'Zaire FC',date:'2019-05-25',time:'15:45',location:'JK',status:'derrota',goalsUs:2,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h212',opponent:'Copa',date:'2019-05-18',time:'15:30',location:'Leo Bertaco',status:'vitoria',goalsUs:2,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h213',opponent:'Manchester',date:'2019-05-04',time:'15:30',location:'Leo Bertaco',status:'derrota',goalsUs:3,goalsThem:5,scorers:'',assists:'',notes:'2019'},
-    {id:'h214',opponent:'Ressaca FC',date:'2019-04-27',time:'15:30',location:'Leo Bertaco',status:'derrota',goalsUs:2,goalsThem:6,scorers:'',assists:'',notes:'2019'},
-    {id:'h215',opponent:'Amapá',date:'2019-04-13',time:'12:00',location:'JK',status:'derrota',goalsUs:1,goalsThem:3,scorers:'',assists:'',notes:'2019'},
-    {id:'h216',opponent:'Ypu',date:'2019-04-06',time:'16:00',location:'Leo Bertaco',status:'vitoria',goalsUs:4,goalsThem:1,scorers:'',assists:'',notes:'2019'},
-    {id:'h217',opponent:'Matonense',date:'2019-03-30',time:'16:00',location:'Leo Bertaco',status:'vitoria',goalsUs:10,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h218',opponent:'Miramar',date:'2019-03-23',time:'16:00',location:'Leo Bertaco',status:'derrota',goalsUs:3,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h219',opponent:'Fênix FC',date:'2019-03-16',time:'16:00',location:'Leo Bertaco',status:'vitoria',goalsUs:4,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h220',opponent:'AFU',date:'2019-02-23',time:'16:00',location:'Lami',status:'derrota',goalsUs:1,goalsThem:4,scorers:'',assists:'',notes:'2019'},
-    {id:'h221',opponent:'Ressaca FC',date:'2019-02-09',time:'17:00',location:'Leo Bertaco',status:'derrota',goalsUs:3,goalsThem:5,scorers:'',assists:'',notes:'2019'},
-    {id:'h222',opponent:'Amapá',date:'2019-02-02',time:'14:00',location:'Riograndense',status:'derrota',goalsUs:1,goalsThem:2,scorers:'',assists:'',notes:'2019'},
-    {id:'h223',opponent:'Sojão',date:'2019-01-31',time:'21:00',location:'Bertaco',status:'derrota',goalsUs:0,goalsThem:4,scorers:'',assists:'',notes:'2019'},
   ];
   // Firebase batch limit is 500 ops — split into chunks
   const allGames=[...agenda,...hist];
@@ -1552,6 +1453,17 @@ async function startListeners(){
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'confrats'),snap=>{cache.confrats=snap.docs.map(d=>({id:d.id,...d.data()}));renderConfratList();});
 }
+
+
+
+window.adjScoreUs=function(d){adjScore(window._currentGameId,'us',d);};
+window.adjScoreThem=function(d){adjScore(window._currentGameId,'them',d);};
+// ===== BTN WRAPPERS (avoid inline ID passing) =====
+window.adjScoreBtn=function(el){adjScore(el.dataset.id,el.dataset.side,parseInt(el.dataset.delta));};
+window.saveGameDetailBtn=function(el){saveGameDetail(el.dataset.id);};
+window.sendPostGameWABtn=function(el){sendPostGameWA(el.dataset.id);};
+window.deletePlayerBtn=function(el){deletePlayer(el.dataset.id);};
+window.editPlayerPhotoBtn=function(el,event){editPlayerPhoto(event,el.dataset.id);};
 
 // ===== INIT =====
 async function init(){
