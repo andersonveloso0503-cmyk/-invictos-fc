@@ -335,6 +335,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       <button class="btn-can" style="flex:1;margin-top:0" onclick="limparConf()">🗑️ Limpar</button>
     </div>
   </div>
+  <div class="sh"><h2>📱 CONVOCAR INDIVIDUAL</h2><div class="sl"></div></div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-size:.7rem;color:var(--tm);margin-bottom:10px;letter-spacing:1px">Toque no WhatsApp para convocar individualmente</div>
+    <div id="individualWAList"></div>
+  </div>
   <div class="sh"><h2>📊 ESTATÍSTICAS</h2><div class="sl"></div></div>
   <div class="sgrid" id="teamStatsGrid"></div>
   <div class="card">
@@ -785,29 +790,54 @@ window.sendPostGameWA=function(id){
 
 // ===== GAMES LIST =====
 function renderBestPlayer(){
-  var el=document.getElementById('bestPlayerSection');if(!el)return;
-  // Find last finished game with notas
-  var gamesWithNotas=cache.games.filter(function(g){return g.status!=='agendado'&&g.notas&&Object.keys(g.notas).length>0;}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var el=document.getElementById('bestPlayerSection');
+  if(!el)return;
+  var gamesWithNotas=cache.games.filter(function(g){
+    return g.status!=='agendado'&&g.notas&&Object.keys(g.notas).length>0;
+  }).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  
   if(gamesWithNotas.length===0){el.innerHTML='';return;}
+  
   var lastGame=gamesWithNotas[0];
   var notas=lastGame.notas;
-  var best=null;var bestNota=0;
-  Object.keys(notas).forEach(function(pid){if(notas[pid]>bestNota){bestNota=notas[pid];best=pid;}});
-  if(!best){el.innerHTML='';return;}
-  var p=cache.players.find(function(x){return x.id===best;});
+  var bestPid=null;var bestNota=0;
+  Object.keys(notas).forEach(function(pid){
+    if(notas[pid]>bestNota){bestNota=notas[pid];bestPid=pid;}
+  });
+  if(!bestPid){el.innerHTML='';return;}
+  
+  var p=cache.players.find(function(x){return x.id===bestPid;});
   if(!p){el.innerHTML='';return;}
-  var av=p.photo?'<img src="'+p.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;border:3px solid gold">':('<span style="font-size:3rem">'+(p.emoji||'?')+'</span>');
+  
+  var av=p.photo
+    ?'<img src="'+p.photo+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
+    :('<span style="font-size:3.5rem">'+(p.emoji||'?')+'</span>');
+  var star=bestNota>=9?'🌟':bestNota>=7?'⭐':'✨';
   var sl=statusLabel(lastGame.status);
-  el.innerHTML='<div style="background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(139,26,26,0.3));border:2px solid gold;border-radius:14px;padding:16px;margin-bottom:12px;text-align:center;position:relative;overflow:hidden">'
-    +'<div style="font-size:.6rem;color:gold;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px">MELHOR DO JOGO</div>'
-    +'<div style="font-size:.7rem;color:var(--tm);margin-bottom:10px">'+lastGame.opponent+' ('+fmtDate(lastGame.date)+')</div>'
-    +'<div style="width:90px;height:90px;border-radius:50%;margin:0 auto 10px;overflow:hidden;background:linear-gradient(135deg,var(--crd),var(--cr));display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(255,215,0,0.4)">'+av+'</div>'
-    +'<div style="font-family:Cinzel,serif;font-size:1.2rem;font-weight:900;color:gold">'+( p.nick||p.name)+'</div>'
-    +'<div style="font-size:.72rem;color:var(--tm);margin-top:3px">'+(p.pos||'')+'</div>'
-    +'<div style="font-family:Cinzel,serif;font-size:2.5rem;font-weight:900;color:gold;margin-top:6px">'+bestNota+'<span style="font-size:1rem;color:var(--tm)">/10</span></div>'
-    +'<div style="font-size:1.5rem;margin-top:4px">'+( bestNota>=9?'🌟':bestNota>=7?'⭐':'✨')+'</div>'
+  
+  el.innerHTML='<div style="'
+    +'background:linear-gradient(135deg,rgba(255,215,0,0.12),rgba(139,26,26,0.35));'
+    +'border:2px solid gold;border-radius:14px;padding:16px 14px;margin-bottom:12px;'
+    +'text-align:center;position:relative;overflow:hidden;">'
+    +'<div style="font-size:.58rem;color:gold;letter-spacing:4px;text-transform:uppercase;margin-bottom:6px;font-family:Cinzel,serif;">MELHOR DO JOGO</div>'
+    +'<div style="font-size:.68rem;color:var(--tm);margin-bottom:12px;">'
+      +'vs '+lastGame.opponent+' &nbsp;|&nbsp; '+fmtDate(lastGame.date)
+      +'&nbsp; <span class="gs '+sl[1]+'" style="font-size:.55rem;padding:2px 6px;">'+sl[0]+'</span>'
+    +'</div>'
+    +'<div style="width:90px;height:90px;border-radius:50%;margin:0 auto 10px;overflow:hidden;'
+      +'background:linear-gradient(135deg,var(--crd),var(--cr));'
+      +'display:flex;align-items:center;justify-content:center;'
+      +'box-shadow:0 0 0 3px gold,0 0 20px rgba(255,215,0,0.4);">'+av+'</div>'
+    +'<div style="font-family:Cinzel,serif;font-size:1.2rem;font-weight:900;color:gold;letter-spacing:1px;">'+(p.nick||p.name)+'</div>'
+    +'<div style="font-size:.68rem;color:var(--tm);margin-top:3px;">'+(p.pos||'')+'</div>'
+    +'<div style="margin-top:8px;">'
+      +'<span style="font-family:Cinzel,serif;font-size:2.8rem;font-weight:900;color:gold;line-height:1;">'+bestNota+'</span>'
+      +'<span style="font-size:.9rem;color:var(--tm);">/10</span>'
+    +'</div>'
+    +'<div style="font-size:1.8rem;margin-top:4px;">'+star+'</div>'
     +'</div>';
 }
+
 
 function gameCardHTML(g,showDel){
   if(showDel===undefined)showDel=true;
@@ -1165,6 +1195,69 @@ window.saveConfrat=async function(){
   showSync(false);
 };
 
+function renderIndividualWA(){
+  var el=document.getElementById('individualWAList');
+  if(!el)return;
+  if(cache.players.length===0){
+    el.innerHTML='<div class="es"><div class="ei">👥</div><p>Adicione jogadores primeiro</p></div>';
+    return;
+  }
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var dt=nextGame?nextGame.date:document.getElementById('wa-date').value;
+  var tm=nextGame?nextGame.time:document.getElementById('wa-time').value;
+  var lc=nextGame?nextGame.location:document.getElementById('wa-location').value.trim();
+  var op=nextGame?nextGame.opponent:document.getElementById('wa-opponent').value.trim();
+  var valor=document.getElementById('wa-valor').value.trim()||'25';
+  var appUrl='https://andersonveloso0503-cmyk.github.io/-invictos-fc';
+  
+  el.innerHTML=cache.players.map(function(p){
+    var av=p.photo?'<img src="'+p.photo+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0">':('<span style="font-size:1.3rem;flex-shrink:0">'+(p.emoji||'?')+'</span>');
+    var isConf=cache.confirmed.includes(p.id);
+    var isAbsent=cache.absent.includes(p.id);
+    var badge=isConf?'<span style="font-size:.6rem;color:#4ADE80;margin-left:4px">✅</span>':isAbsent?'<span style="font-size:.6rem;color:#F87171;margin-left:4px">❌</span>':'';
+    
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)">'
+      +av
+      +'<div style="flex:1">'
+        +'<div style="font-size:.88rem;font-weight:600">'+(p.nick||p.name)+badge+'</div>'
+        +'<div style="font-size:.6rem;color:var(--tm)">'+(p.pos||'-')+'</div>'
+      +'</div>'
+      +'<button data-pid="'+p.id+'" data-name="'+(p.nick||p.name.split(' ')[0])+'" data-op="'+op+'" data-dt="'+dt+'" data-tm="'+tm+'" data-lc="'+lc+'" data-val="'+valor+'" onclick="sendIndividualWA(this)" style="background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:20px;padding:7px 12px;color:white;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">'
+        +'📲 WA'
+      +'</button>'
+    +'</div>';
+  }).join('');
+}
+
+window.sendIndividualWA=function(btn){
+  var pid=btn.dataset.pid;
+  var name=btn.dataset.name;
+  var op=btn.dataset.op||'Proximo jogo';
+  var dt=btn.dataset.dt;
+  var tm=btn.dataset.tm;
+  var lc=btn.dataset.lc;
+  var val=btn.dataset.val||'25';
+  var appUrl='https://andersonveloso0503-cmyk.github.io/-invictos-fc';
+  var nl='\n';
+  
+  var msg='Oi '+name+'! '+nl+nl;
+  msg+='INVICTOS FC te convoca!'+nl+nl;
+  if(op)msg+='Invictos FC vs '+op+nl;
+  if(dt)msg+=fmtDateWA(dt);
+  if(tm)msg+=' as '+tm+'h';
+  if(dt||tm)msg+=nl;
+  if(lc)msg+=lc+nl;
+  msg+='Valor: R$ '+val+',00'+nl;
+  msg+='Nao esqueca o uniforme!'+nl+nl;
+  msg+='Vai conseguir jogar?'+nl+nl;
+  msg+='SIM: '+appUrl+'?confirm='+pid+nl;
+  msg+='NAO: '+appUrl+'?absent='+pid+nl+nl;
+  msg+='Invictos FC - Nunca Rendidos!';
+  
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+};
+
 function renderConfratList(){
   var el=document.getElementById('confratList');if(!el)return;
   var confrats=cache.confrats||[];
@@ -1199,6 +1292,7 @@ window.showPage=function(name,btn){
   renderAll();updateAdminUI();
   if(name==='whatsapp'){
     renderConfirmList();
+    renderIndividualWA();
     const today=todayStr();
     const next=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
     if(next){
@@ -1452,6 +1546,26 @@ async function startListeners(){
   onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'confrats'),snap=>{cache.confrats=snap.docs.map(d=>({id:d.id,...d.data()}));renderConfratList();});
+  
+  // Handle URL confirm/absent after DB connects
+  if(confirmPid){
+    try{
+      await setDoc(doc(db,'confirmed',confirmPid),{id:confirmPid});
+      await deleteDoc(doc(db,'absent',confirmPid));
+      showUrlResponse('confirmado','PRESENCA CONFIRMADA!','Voce esta na lista do jogo!');
+    }catch(e){}
+  } else if(absentPid){
+    try{
+      await setDoc(doc(db,'absent',absentPid),{id:absentPid});
+      await deleteDoc(doc(db,'confirmed',absentPid));
+      showUrlResponse('ausente','AUSENCIA REGISTRADA','Tudo bem, te esperamos no proximo!');
+    }catch(e){}
+  }
+  
+  // Clean URL after handling
+  if(confirmPid||absentPid){
+    window.history.replaceState({},'',window.location.pathname);
+  }
 }
 
 
@@ -1465,8 +1579,27 @@ window.sendPostGameWABtn=function(el){sendPostGameWA(el.dataset.id);};
 window.deletePlayerBtn=function(el){deletePlayer(el.dataset.id);};
 window.editPlayerPhotoBtn=function(el,event){editPlayerPhoto(event,el.dataset.id);};
 
+// ===== URL RESPONSE =====
+function showUrlResponse(type, title, msg){
+  var isConf = type==='confirmado';
+  var overlay = document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px;text-align:center;';
+  overlay.innerHTML='<div style="font-size:4rem">'+(isConf?'✅':'❌')+'</div>'
+    +'<div style="font-family:Cinzel,serif;font-size:1.4rem;font-weight:900;color:'+(isConf?'#4ADE80':'#F87171')+'">'+title+'</div>'
+    +'<div style="font-size:1rem;color:var(--t);max-width:280px;">'+msg+'</div>'
+    +'<div style="font-size:.8rem;color:var(--tm);">Fechando em 3 segundos...</div>'
+    +'<button onclick="this.parentElement.remove()" style="margin-top:8px;padding:12px 28px;background:var(--cr);border:1px solid var(--gd);border-radius:30px;color:var(--gb);font-family:Cinzel,serif;font-size:.9rem;cursor:pointer;">OK</button>';
+  document.body.appendChild(overlay);
+  setTimeout(function(){if(overlay.parentElement)overlay.remove();},3000);
+}
+
 // ===== INIT =====
 async function init(){
+  // Handle URL confirm/absent params
+  var urlParams=new URLSearchParams(window.location.search);
+  var confirmPid=urlParams.get('confirm');
+  var absentPid=urlParams.get('absent');
+  
   // Set logos
   ['spl-logo','hl','hero-logo'].forEach(cls=>{document.querySelectorAll('.'+cls).forEach(el=>el.src=LOGO);});
   buildEmoji();loadLocal();
