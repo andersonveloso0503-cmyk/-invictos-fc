@@ -312,6 +312,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 
 <!-- WHATSAPP -->
 <div id="page-whatsapp" class="page">
+  <div id="adminImportBanner" class="admin-only" style="background:linear-gradient(135deg,rgba(139,26,26,0.4),rgba(92,14,14,0.3));border:1px solid var(--gd);border-radius:10px;padding:11px 13px;margin-bottom:11px;display:none;">
+    <div style="font-size:.72rem;color:var(--gb);font-family:Cinzel,serif;margin-bottom:6px;">⚠️ JOGOS HISTÓRICOS</div>
+    <div style="font-size:.7rem;color:var(--tm);margin-bottom:8px;">Se os jogos antigos não aparecem, clique para importar.</div>
+    <button onclick="importarHistorico()" style="width:100%;padding:9px;background:linear-gradient(135deg,var(--cr),var(--crd));border:1px solid var(--gd);border-radius:8px;color:var(--gb);font-family:Cinzel,serif;font-size:.78rem;cursor:pointer;">📥 IMPORTAR JOGOS HISTÓRICOS</button>
+  </div>
   <div class="sh"><h2>📢 CONVOCAR JOGO</h2><div class="sl"></div></div>
   <div class="card" style="margin-bottom:12px">
     <div class="fg"><label class="fl">Adversário</label><input class="fi" id="wa-opponent" placeholder="Ex: Grêmio do Bairro"></div>
@@ -336,6 +341,19 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     </div>
   </div>
   <div class="sh"><h2>📱 CONVOCAR INDIVIDUAL</h2><div class="sl"></div></div>
+  <div style="display:flex;gap:8px;margin-bottom:10px">
+    <button class="btn-wa" style="flex:1" onclick="convocarTodos()">
+      📲 CONVOCAR TODOS EM SEQUÊNCIA
+    </button>
+  </div>
+  <div id="convocarTodosStatus" style="display:none;background:var(--s2);border:1px solid var(--br);border-radius:10px;padding:12px;margin-bottom:10px;text-align:center;">
+    <div style="font-family:Cinzel,serif;font-size:.9rem;color:var(--gb)" id="convocarTodosTitle">Abrindo WhatsApp...</div>
+    <div style="font-size:.75rem;color:var(--tm);margin-top:4px" id="convocarTodosInfo"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;justify-content:center">
+      <button onclick="convocarProximo()" style="background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:20px;padding:8px 18px;color:white;font-family:Cinzel,serif;font-size:.8rem;cursor:pointer;">➡️ PRÓXIMO</button>
+      <button onclick="pararConvocar()" style="background:none;border:1px solid var(--br);border-radius:20px;padding:8px 18px;color:var(--tm);font-family:Rajdhani,sans-serif;font-size:.85rem;cursor:pointer;">⏹ PARAR</button>
+    </div>
+  </div>
   <div class="card" style="margin-bottom:12px">
     <div style="font-size:.7rem;color:var(--tm);margin-bottom:10px;letter-spacing:1px">Toque no WhatsApp para convocar individualmente</div>
     <div id="individualWAList"></div>
@@ -563,6 +581,8 @@ function updateAdminUI(){
   else{btn.textContent='🔒 ADMIN';btn.style.color='var(--g)';btn.style.borderColor='var(--br)';btn.onclick=openAdminModal;}
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin?'':'none');
   document.querySelectorAll('.del-btn').forEach(el=>el.style.display=isAdmin?'':'none');
+  var ib=document.getElementById('adminImportBanner');
+  if(ib)ib.style.display=isAdmin?'block':'none';
 }
 
 window.openAdminModal=function(){
@@ -1230,6 +1250,89 @@ function renderIndividualWA(){
   }).join('');
 }
 
+// ===== CONVOCAR TODOS EM SEQUÊNCIA =====
+var _convocandoIndex = 0;
+var _convocandoList = [];
+var _convocandoMsg = '';
+
+window.convocarTodos=function(){
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var dt=nextGame?nextGame.date:document.getElementById('wa-date').value;
+  var tm=nextGame?nextGame.time:document.getElementById('wa-time').value;
+  var lc=nextGame?nextGame.location:document.getElementById('wa-location').value.trim();
+  var op=nextGame?nextGame.opponent:document.getElementById('wa-opponent').value.trim();
+  var valor=document.getElementById('wa-valor').value.trim()||'25';
+  var appUrl='https://andersonveloso0503-cmyk.github.io/-invictos-fc';
+  var nl='\n';
+
+  if(!op){showToast('Preencha o adversario primeiro!');return;}
+  if(cache.players.length===0){showToast('Nenhum jogador no elenco!');return;}
+
+  // Build list and base message
+  _convocandoList=cache.players;
+  _convocandoIndex=0;
+  
+  // Store game info for building messages
+  window._convData={dt:dt,tm:tm,lc:lc,op:op,valor:valor,appUrl:appUrl,nl:nl};
+  
+  // Show status panel
+  document.getElementById('convocarTodosStatus').style.display='block';
+  
+  // Open first
+  convocarProximo();
+};
+
+window.convocarProximo=function(){
+  if(_convocandoIndex>=_convocandoList.length){
+    // Done!
+    document.getElementById('convocarTodosTitle').textContent='TODOS CONVOCADOS!';
+    document.getElementById('convocarTodosInfo').textContent='Convocacao enviada para '+_convocandoList.length+' jogadores';
+    document.getElementById('convocarTodosStatus').style.backgroundColor='rgba(34,197,94,0.1)';
+    setTimeout(function(){pararConvocar();},3000);
+    return;
+  }
+  
+  var p=_convocandoList[_convocandoIndex];
+  var d=window._convData;
+  var nl=d.nl;
+  var name=p.nick||p.name.split(' ')[0];
+  
+  // Update status
+  var remaining=_convocandoList.length-_convocandoIndex-1;
+  document.getElementById('convocarTodosTitle').textContent=((_convocandoIndex+1)+' de '+_convocandoList.length+' — '+name);
+  document.getElementById('convocarTodosInfo').textContent=(remaining>0?(remaining+' jogador'+(remaining!==1?'es':'')+' restante'):'Ultimo jogador!');
+  
+  // Build message
+  var msg='Oi '+name+'! '+nl+nl;
+  msg+='INVICTOS FC te convoca!'+nl+nl;
+  if(d.op)msg+='Invictos FC vs '+d.op+nl;
+  if(d.dt)msg+=fmtDateWA(d.dt);
+  if(d.tm)msg+=' as '+d.tm+'h';
+  if(d.dt||d.tm)msg+=nl;
+  if(d.lc)msg+=d.lc+nl;
+  msg+='Valor: R$ '+d.valor+',00'+nl;
+  msg+='Nao esqueca o uniforme!'+nl+nl;
+  msg+='Vai conseguir jogar?'+nl+nl;
+  msg+='SIM: '+d.appUrl+'?confirm='+p.id+nl;
+  msg+='NAO: '+d.appUrl+'?absent='+p.id+nl+nl;
+  msg+='Invictos FC - Nunca Rendidos!';
+  
+  // Open WhatsApp
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  
+  _convocandoIndex++;
+};
+
+window.pararConvocar=function(){
+  _convocandoIndex=0;
+  _convocandoList=[];
+  var el=document.getElementById('convocarTodosStatus');
+  el.style.display='none';
+  el.style.backgroundColor='';
+  document.getElementById('convocarTodosTitle').textContent='Abrindo WhatsApp...';
+};
+
 window.sendIndividualWA=function(btn){
   var pid=btn.dataset.pid;
   var name=btn.dataset.name;
@@ -1354,6 +1457,28 @@ async function seedPlayers(){
   const batch=writeBatch(db);
   elenco.forEach(p=>batch.set(doc(db,'players',p.id),p));
   await batch.commit();
+}
+
+function getSeedGames(){
+  var agenda=[
+    {id:'ag001',opponent:'La Barca',date:'2026-05-02',time:'10:00',location:'Bertaco',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag002',opponent:'Alvi Negro',date:'2026-05-23',time:'16:00',location:'Viamao',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag003',opponent:'Treze FC',date:'2026-05-30',time:'15:00',location:'Cachoeirinha SESI',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag004',opponent:'Nacional',date:'2026-06-07',time:'09:00',location:'JK',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag005',opponent:'Bageense',date:'2026-06-13',time:'12:00',location:'Complexo Santos',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag006',opponent:'West Ham',date:'2026-06-20',time:'',location:'Guaiba',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag007',opponent:'Colo Colo',date:'2026-06-27',time:'10:00',location:'Renato Bertaco',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag008',opponent:'Locomotive',date:'2026-07-18',time:'10:00',location:'Campo Canada',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag009',opponent:'West Ham',date:'2026-07-25',time:'15:30',location:'Leo Bertaco',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag010',opponent:'Mocidade',date:'2026-08-15',time:'12:00',location:'Leo Bertaco',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag011',opponent:'Bageense',date:'2026-08-29',time:'15:30',location:'Leo Bertaco',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag012',opponent:'Alvi Negro',date:'2026-09-26',time:'14:00',location:'Viamao',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag013',opponent:'Alanbiki',date:'2026-10-10',time:'10:00',location:'Campo Canada',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag014',opponent:'Colo Colo',date:'2026-10-24',time:'10:00',location:'Renato Bertaco',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''},
+    {id:'ag015',opponent:'La Barca',date:'2026-12-19',time:'10:00',location:'Bertaco',status:'agendado',goalsUs:0,goalsThem:0,scorers:'',assists:'',notes:''}
+  ];
+  // Get hist array from seedGames
+  return agenda.concat(window._histGames||[]);
 }
 
 async function seedGames(){
@@ -1604,6 +1729,7 @@ async function seedGames(){
     {id:'h221',opponent:'Ressaca FC',date:'2019-02-09',time:'17:00',location:'Leo Bertaco',status:'derrota',goalsUs:3,goalsThem:5,scorers:'',assists:'',notes:'2019'},
     {id:'h222',opponent:'Amapa',date:'2019-02-02',time:'14:00',location:'Riograndense',status:'derrota',goalsUs:1,goalsThem:2,scorers:'',assists:'',notes:'2019'},
     {id:'h223',opponent:'Sojao',date:'2019-01-31',time:'21:00',location:'Bertaco',status:'derrota',goalsUs:0,goalsThem:4,scorers:'',assists:'',notes:'2019'},];
+  window._histGames=hist.slice();
   // Firebase batch limit is 500 ops — split into chunks
   const allGames=[...agenda,...hist];
   const chunkSize=400;
@@ -1615,7 +1741,45 @@ async function seedGames(){
   }
 }
 
-window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
+window.forcSync=async function(){
+  showSync(true);
+  try{
+    await seedGames();
+    showToast('Sincronizado! OK');
+  }catch(e){showToast('Erro: '+e.message);}
+  showSync(false);
+};
+
+window.importarHistorico=async function(){
+  if(!isAdmin){showToast('Apenas admin!');return;}
+  if(!confirm('Importar todos os jogos historicos para o Firebase? Isso pode demorar alguns segundos.'))return;
+  showSync(true);
+  try{
+    // Get existing game IDs
+    var existing=await getDocs(collection(db,'games'));
+    var existingIds=existing.docs.map(function(d){return d.id;});
+    
+    // Get historical games from seedGames function data
+    var toAdd=[];
+    var allGames=getSeedGames();
+    allGames.forEach(function(g){
+      if(!existingIds.includes(g.id))toAdd.push(g);
+    });
+    
+    if(toAdd.length===0){showToast('Todos os jogos ja estao no Firebase!');showSync(false);return;}
+    
+    // Add in chunks of 400
+    var chunkSize=400;
+    for(var i=0;i<toAdd.length;i+=chunkSize){
+      var chunk=toAdd.slice(i,i+chunkSize);
+      var batch=writeBatch(db);
+      chunk.forEach(function(g){batch.set(doc(db,'games',g.id),g);});
+      await batch.commit();
+    }
+    showToast('Importados '+toAdd.length+' jogos! OK');
+  }catch(e){showToast('Erro: '+e.message);}
+  showSync(false);
+};
 
 async function startListeners(){
   onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();setOnline(true);},()=>setOnline(false));
