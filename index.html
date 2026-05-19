@@ -222,6 +222,19 @@
   .install-btn-banner { background:var(--gold);color:var(--bg);padding:6px 12px;border-radius:20px;border:none;font-family:'Cinzel',serif;font-size:0.72rem;font-weight:700;cursor:pointer;flex-shrink:0; }
   .close-banner { background:none;border:none;color:var(--text-muted);font-size:1rem;cursor:pointer; }
 
+  /* WHATSAPP BTN */
+  .btn-whatsapp { width:100%;padding:13px;background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:10px;color:#fff;font-family:'Cinzel',serif;font-size:0.88rem;font-weight:700;letter-spacing:2px;cursor:pointer;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 0.2s; }
+  .btn-whatsapp:active { opacity:0.85; }
+
+  /* CONFIRM LIST */
+  .confirm-item { display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:border-color 0.2s; }
+  .confirm-item.confirmed { border-color:#25D366;background:rgba(37,211,102,0.08); }
+  .confirm-check { width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:0.8rem;flex-shrink:0;transition:all 0.2s; }
+  .confirm-item.confirmed .confirm-check { background:#25D366;border-color:#25D366;color:white; }
+  .confirm-name { font-family:'Rajdhani',sans-serif;font-size:0.95rem;font-weight:600;flex:1; }
+  .confirm-pos { font-size:0.65rem;color:var(--text-muted);letter-spacing:1px; }
+  .confirm-count { font-family:'Cinzel',serif;font-size:0.9rem;color:#25D366;font-weight:700; }
+
   ::-webkit-scrollbar { width:4px; }
   ::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
 </style>
@@ -298,9 +311,37 @@
   <div id="assistsList"></div>
 </div>
 
-<!-- STATS PAGE -->
-<div id="page-stats" class="page">
-  <div class="section-head"><h2>ESTATÍSTICAS</h2><div class="section-line"></div></div>
+<!-- WHATSAPP PAGE -->
+<div id="page-whatsapp" class="page">
+
+  <!-- CONVOCAR JOGO -->
+  <div class="section-head"><h2>📢 CONVOCAR JOGO</h2><div class="section-line"></div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="form-group"><label class="form-label">Adversário</label><input class="form-input" id="wa-opponent" placeholder="Ex: Grêmio do Bairro"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Data</label><input class="form-input" id="wa-date" type="date"></div>
+      <div class="form-group"><label class="form-label">Horário</label><input class="form-input" id="wa-time" type="time"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Local / Campo</label><input class="form-input" id="wa-location" placeholder="Ex: Campo do Parque"></div>
+    <div class="form-group"><label class="form-label">Mensagem extra (opcional)</label><input class="form-input" id="wa-extra" placeholder="Ex: Levem colete azul"></div>
+    <button class="btn-whatsapp" onclick="convocarWhatsApp()">
+      <span style="font-size:1.2rem">📲</span> ENVIAR CONVOCAÇÃO
+    </button>
+  </div>
+
+  <!-- LISTA DO JOGO -->
+  <div class="section-head"><h2>✅ LISTA DO JOGO</h2><div class="section-line"></div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:10px;letter-spacing:1px">Marque quem vai jogar hoje:</div>
+    <div id="confirmList"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-whatsapp" style="flex:1" onclick="compartilharLista()"><span style="font-size:1.1rem">📋</span> COMPARTILHAR LISTA</button>
+      <button class="btn-cancel" style="flex:1;margin-top:0" onclick="limparConfirmados()">🗑️ Limpar</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="section-head"><h2>📊 ESTATÍSTICAS</h2><div class="section-line"></div></div>
   <div class="stats-grid" id="teamStatsGrid"></div>
   <div class="card">
     <div class="section-head" style="margin-bottom:8px"><h2 style="font-size:0.88rem">APROVEITAMENTO</h2><div class="section-line"></div></div>
@@ -321,7 +362,7 @@
   <button class="nav-btn" onclick="showPage('jogos',this)"><div class="nav-icon">⚽</div>Jogos</button>
   <button class="nav-btn" onclick="showPage('elenco',this)"><div class="nav-icon">👥</div>Elenco</button>
   <button class="nav-btn" onclick="showPage('artilharia',this)"><div class="nav-icon">🎯</div>Artilharia</button>
-  <button class="nav-btn" onclick="showPage('stats',this)"><div class="nav-icon">📊</div>Stats</button>
+  <button class="nav-btn" onclick="showPage('whatsapp',this)"><div class="nav-icon">📲</div>WhatsApp</button>
 </nav>
 
 <!-- MODAL ADD GAME -->
@@ -454,6 +495,8 @@ function saveData(key, val) { localStorage.setItem('ifc_' + key, JSON.stringify(
 function init() {
   setLogos();
   buildEmojiPicker();
+  loadElenco();
+  loadAgenda2026();
   document.getElementById('g-date').value = new Date().toISOString().split('T')[0];
   renderAll();
   setTimeout(() => {
@@ -975,6 +1018,197 @@ document.getElementById('installBtn').addEventListener('click', async () => {
     document.getElementById('installBanner').classList.add('hidden');
   }
 });
+
+// ===== WHATSAPP =====
+function fmtDateWA(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  const months = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return `${day} de ${months[parseInt(m)-1]}`;
+}
+
+function convocarWhatsApp() {
+  const opponent = document.getElementById('wa-opponent').value.trim();
+  const date = document.getElementById('wa-date').value;
+  const time = document.getElementById('wa-time').value;
+  const location = document.getElementById('wa-location').value.trim();
+  const extra = document.getElementById('wa-extra').value.trim();
+  if (!opponent) { showToast('Informe o adversário!'); return; }
+
+  let msg = `⚔️ *CONVOCAÇÃO INVICTOS FC* ⚔️\n\n`;
+  msg += `🏆 *${opponent ? 'Invictos FC vs ' + opponent : 'Jogo Marcado!'}*\n\n`;
+  if (date) msg += `📅 *Data:* ${fmtDateWA(date)}\n`;
+  if (time) msg += `🕐 *Horário:* ${time}h\n`;
+  if (location) msg += `📍 *Local:* ${location}\n`;
+  msg += `\n⚽ *TODOS CONFIRMEM PRESENÇA!*\n`;
+  if (extra) msg += `\n💬 ${extra}\n`;
+  msg += `\n🦁 _Invictos FC — Nunca Rendidos!_`;
+
+  const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function renderConfirmList() {
+  const {players} = getData();
+  const confirmed = JSON.parse(localStorage.getItem('ifc_confirmed') || '[]');
+  const el = document.getElementById('confirmList');
+  if (!el) return;
+  if (players.length === 0) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>Adicione jogadores no Elenco primeiro</p></div>`;
+    return;
+  }
+  const count = confirmed.length;
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <span style="font-size:0.8rem;color:var(--text-muted)">Toque para confirmar/cancelar</span>
+    <span class="confirm-count">${count} confirmado${count!==1?'s':''}</span>
+  </div>` +
+  players.map(p => {
+    const isIn = confirmed.includes(p.id);
+    const avatarHTML = p.photo
+      ? `<img src="${p.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+      : `<span style="font-size:1.1rem;flex-shrink:0">${p.emoji||'⚽'}</span>`;
+    return `<div class="confirm-item ${isIn?'confirmed':''}" onclick="toggleConfirm('${p.id}')">
+      <div class="confirm-check">${isIn?'✓':''}</div>
+      ${avatarHTML}
+      <div style="flex:1">
+        <div class="confirm-name">${p.nick||p.name}</div>
+        <div class="confirm-pos">${p.pos} · Nº${p.number||'?'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleConfirm(playerId) {
+  const confirmed = JSON.parse(localStorage.getItem('ifc_confirmed') || '[]');
+  const idx = confirmed.indexOf(playerId);
+  if (idx >= 0) confirmed.splice(idx, 1);
+  else confirmed.push(playerId);
+  localStorage.setItem('ifc_confirmed', JSON.stringify(confirmed));
+  renderConfirmList();
+}
+
+function limparConfirmados() {
+  if (!confirm('Limpar lista de confirmados?')) return;
+  localStorage.setItem('ifc_confirmed', '[]');
+  renderConfirmList();
+  showToast('Lista limpa!');
+}
+
+function compartilharLista() {
+  const {players} = getData();
+  const confirmed = JSON.parse(localStorage.getItem('ifc_confirmed') || '[]');
+  const waDate = document.getElementById('wa-date').value;
+  const waTime = document.getElementById('wa-time').value;
+  const waLocal = document.getElementById('wa-location').value.trim();
+
+  if (confirmed.length === 0) { showToast('Nenhum jogador confirmado!'); return; }
+
+  const confirmedPlayers = players.filter(p => confirmed.includes(p.id));
+  const goleiros = confirmedPlayers.filter(p=>p.pos==='Goleiro');
+  const outros = confirmedPlayers.filter(p=>p.pos!=='Goleiro');
+
+  let msg = `✅ *LISTA DO JOGO — INVICTOS FC* ✅\n`;
+  if (waDate) msg += `📅 ${fmtDateWA(waDate)}`;
+  if (waTime) msg += ` às ${waTime}h`;
+  if (waDate || waTime) msg += '\n';
+  if (waLocal) msg += `📍 ${waLocal}\n`;
+  msg += `\n🧤 *GOLEIROS (${goleiros.length}):*\n`;
+  goleiros.forEach((p,i) => msg += `${i+1}. ${p.nick||p.name}\n`);
+  msg += `\n⚽ *JOGADORES (${outros.length}):*\n`;
+  outros.forEach((p,i) => msg += `${i+1}. ${p.nick||p.name}\n`);
+  msg += `\n👥 *Total: ${confirmedPlayers.length} confirmados*\n`;
+  msg += `\n🦁 _Invictos FC — Nunca Rendidos!_`;
+
+  const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+// Override showPage to also render confirm list
+const _origShowPage = showPage;
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  btn.classList.add('active');
+  renderAll();
+  if (name === 'whatsapp') {
+    renderConfirmList();
+    // pre-fill next game info
+    const {games} = getData();
+    const next = games.filter(g=>g.status==='agendado').sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
+    if (next) {
+      if (next.date && !document.getElementById('wa-date').value) document.getElementById('wa-date').value = next.date;
+      if (next.time && !document.getElementById('wa-time').value) document.getElementById('wa-time').value = next.time;
+      if (next.location && !document.getElementById('wa-location').value) document.getElementById('wa-location').value = next.location;
+      if (next.opponent && !document.getElementById('wa-opponent').value) document.getElementById('wa-opponent').value = next.opponent;
+    }
+  }
+}
+
+// ===== ELENCO PRÉ-CARREGADO =====
+function loadElenco() {
+  const {players} = getData();
+  if (players.length > 0) return;
+
+  const elenco = [
+    { id:'pl001', name:'A20',              nick:'A20',          pos:'', number:'1',  emoji:'👑', photo:null, photos:[] },
+    { id:'pl002', name:'Nairon',           nick:'Nairon',       pos:'', number:'',   emoji:'🛡️', photo:null, photos:[] },
+    { id:'pl003', name:'Rafael Vidal',     nick:'Vidal',        pos:'', number:'',   emoji:'⚡', photo:null, photos:[] },
+    { id:'pl004', name:'Victor',           nick:'Victor',       pos:'', number:'',   emoji:'🔥', photo:null, photos:[] },
+    { id:'pl005', name:'Rafael Liima',     nick:'Liima',        pos:'', number:'',   emoji:'😎', photo:null, photos:[] },
+    { id:'pl006', name:'Allan',            nick:'Allan',        pos:'', number:'',   emoji:'💪', photo:null, photos:[] },
+    { id:'pl007', name:'Davi',             nick:'Davi',         pos:'', number:'',   emoji:'⚔️', photo:null, photos:[] },
+    { id:'pl008', name:'Juan Buiu',        nick:'Buiu',         pos:'', number:'',   emoji:'🦁', photo:null, photos:[] },
+    { id:'pl009', name:'Jean',             nick:'Jean',         pos:'', number:'',   emoji:'🎯', photo:null, photos:[] },
+    { id:'pl010', name:'Luis',             nick:'Luis',         pos:'', number:'',   emoji:'🚀', photo:null, photos:[] },
+    { id:'pl011', name:'Renato',           nick:'Renato',       pos:'', number:'',   emoji:'🛡️', photo:null, photos:[] },
+    { id:'pl012', name:'Rodrigo Gamarra',  nick:'Gamarra',      pos:'', number:'',   emoji:'💎', photo:null, photos:[] },
+    { id:'pl013', name:'Wess',             nick:'Wess',         pos:'', number:'',   emoji:'🔥', photo:null, photos:[] },
+    { id:'pl014', name:'Willian Zigue',    nick:'Zigue',        pos:'', number:'',   emoji:'🌟', photo:null, photos:[] },
+    { id:'pl015', name:'Adi Jr',           nick:'Adi',          pos:'', number:'',   emoji:'⚡', photo:null, photos:[] },
+    { id:'pl016', name:'Anderson Benites', nick:'Benites',      pos:'', number:'',   emoji:'🦅', photo:null, photos:[] },
+    { id:'pl017', name:'Bonifácio',        nick:'Boni',         pos:'', number:'',   emoji:'🐺', photo:null, photos:[] },
+    { id:'pl018', name:'Borba',            nick:'Borba',        pos:'', number:'',   emoji:'💪', photo:null, photos:[] },
+    { id:'pl019', name:'Castilhos',        nick:'Castilhos',    pos:'', number:'',   emoji:'🎯', photo:null, photos:[] },
+    { id:'pl020', name:'Dindon',           nick:'Dindon',       pos:'', number:'',   emoji:'👊', photo:null, photos:[] },
+    { id:'pl021', name:'Emmanuel',         nick:'Emmanuel',     pos:'', number:'',   emoji:'🧤', photo:null, photos:[] },
+    { id:'pl022', name:'Gabriel Moura',    nick:'Gabriel',      pos:'', number:'',   emoji:'🦁', photo:null, photos:[] },
+    { id:'pl023', name:'Jhowww',           nick:'Jhow',         pos:'', number:'',   emoji:'🔥', photo:null, photos:[] },
+    { id:'pl024', name:'Junior Guimarães', nick:'Junior',       pos:'', number:'',   emoji:'😎', photo:null, photos:[] },
+    { id:'pl025', name:'Lucas Ramos',      nick:'Lucas',        pos:'', number:'',   emoji:'🚀', photo:null, photos:[] },
+    { id:'pl026', name:'Maicon',           nick:'Maicon',       pos:'', number:'',   emoji:'⚔️', photo:null, photos:[] },
+    { id:'pl027', name:'Wesley Brum',      nick:'Wesley',       pos:'', number:'',   emoji:'🌟', photo:null, photos:[] },
+  ];
+
+  saveData('players', elenco);
+}
+
+// ===== AGENDA 2026 PRÉ-CARREGADA =====
+function loadAgenda2026() {
+  const {games} = getData();
+  // Só carrega se não tiver jogos ainda
+  if (games.length > 0) return;
+
+  const agenda = [
+    { id:'ag001', opponent:'Lá Barca',    date:'2026-05-02', time:'10:00', location:'Bertaco',              status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag002', opponent:'Alvi Negro',  date:'2026-05-23', time:'16:00', location:'Viamão',               status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag003', opponent:'Treze FC',    date:'2026-05-30', time:'15:00', location:'Cachoeirinha SESI',     status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag004', opponent:'Nacional',    date:'2026-06-07', time:'09:00', location:'JK',                   status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'Domingo' },
+    { id:'ag005', opponent:'Bageense',    date:'2026-06-13', time:'12:00', location:'Complexo Santos',      status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag006', opponent:'West Ham',    date:'2026-06-20', time:'',      location:'Guaíba',               status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag007', opponent:'Colo Colo',   date:'2026-06-27', time:'10:00', location:'Renato Bertaco',       status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag008', opponent:'Locomotive',  date:'2026-07-18', time:'10:00', location:'Campo Canadá',         status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag009', opponent:'West Ham',    date:'2026-07-25', time:'15:30', location:'Léo Bertaco',          status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag010', opponent:'Mocidade',    date:'2026-08-15', time:'12:00', location:'Léo Bertaco',          status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag011', opponent:'Bageense',    date:'2026-08-29', time:'15:30', location:'Léo Bertaco',          status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag012', opponent:'Alvi Negro',  date:'2026-09-26', time:'14:00', location:'Viamão',               status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag013', opponent:'Alanbiki',    date:'2026-10-10', time:'10:00', location:'Campo Canadá',         status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag014', opponent:'Colo Colo',   date:'2026-10-24', time:'10:00', location:'Renato Bertaco',       status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+    { id:'ag015', opponent:'Lá Barca',    date:'2026-12-19', time:'10:00', location:'Bertaco',              status:'agendado', goalsUs:0, goalsThem:0, scorers:'', assists:'', notes:'' },
+  ];
+
+  saveData('games', agenda);
+}
 
 init();
 </script>
