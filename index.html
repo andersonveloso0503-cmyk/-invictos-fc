@@ -282,6 +282,22 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   <button class="btn-add admin-only" onclick="openModal('addPlayer')">👤 + ADICIONAR JOGADOR</button>
   <div class="pg" id="playerGrid"></div>
   <div style="margin-top:16px">
+    <div class="sh"><h2>📍 CAMPOS CADASTRADOS</h2><div class="sl"></div></div>
+    <div class="card" style="margin-bottom:10px">
+      <div id="camposList"></div>
+      <div class="fg" style="margin-top:10px">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <input class="fi" id="campo-name-input" placeholder="Nome do campo (ex: Bertaco)" style="flex:1">
+        </div>
+        <div style="display:flex;gap:6px">
+          <input class="fi" id="campo-addr-input" placeholder="Endereco completo (ex: Rua X, 100 - Porto Alegre)" style="flex:1">
+          <button onclick="window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(document.getElementById('campo-addr-input').value),'_blank')" style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:0 12px;color:#4285F4;cursor:pointer;font-size:1.1rem;flex-shrink:0">📍</button>
+        </div>
+        <button class="btn-add admin-only" style="margin-top:8px;margin-bottom:0" onclick="addCampo()">+ ADICIONAR CAMPO</button>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:16px">
     <div class="sh"><h2>📸 GALERIA DO TIME</h2><div class="sl"></div></div>
     <div class="pgrid" id="teamPhotosGrid"></div>
   </div>
@@ -333,7 +349,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       <div class="fg"><label class="fl">Data</label><input class="fi" id="wa-date" type="date"></div>
       <div class="fg"><label class="fl">Horário</label><input class="fi" id="wa-time" type="time"></div>
     </div>
-    <div class="fg"><label class="fl">Local / Campo</label><input class="fi" id="wa-location" placeholder="Ex: Campo do Parque" oninput="updateMapsLink('wa')"></div>
+    <div class="fg"><label class="fl">Local / Campo</label>
+      <select class="fsel" id="wa-campo-select" onchange="selectCampo('wa',this.value)" style="margin-bottom:5px">
+        <option value="">-- Selecionar campo cadastrado --</option>
+      </select>
+      <input class="fi" id="wa-location" placeholder="Ou digite o nome do campo">
+    </div>
     <div class="fg"><label class="fl">Endereco (Google Maps)</label>
       <div style="display:flex;gap:6px">
         <input class="fi" id="wa-address" placeholder="Ex: Av. Ipiranga 1200, Porto Alegre" style="flex:1" oninput="updateMapsLink('wa')">
@@ -406,7 +427,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       <div class="fg"><label class="fl">Data</label><input class="fi" id="g-date" type="date"></div>
       <div class="fg"><label class="fl">Horário</label><input class="fi" id="g-time" type="time"></div>
     </div>
-    <div class="fg"><label class="fl">Local / Campo</label><input class="fi" id="g-location" placeholder="Nome do campo" oninput="updateMapsLink('g')"></div>
+    <div class="fg"><label class="fl">Local / Campo</label>
+      <select class="fsel" id="g-campo-select" onchange="selectCampo('g',this.value)">
+        <option value="">-- Selecionar campo cadastrado --</option>
+      </select>
+      <input class="fi" id="g-location" placeholder="Ou digite o nome do campo" style="margin-top:5px" oninput="updateMapsLink('g')">
+    </div>
     <div class="fg"><label class="fl">Endereco (Google Maps)</label>
       <div style="display:flex;gap:6px">
         <input class="fi" id="g-address" placeholder="Ex: Av. Ipiranga 1200, Porto Alegre" style="flex:1" oninput="updateMapsLink('g')">
@@ -656,7 +682,7 @@ function daysUntil(date){
 }
 
 // ===== RENDER ALL =====
-function renderAll(){renderHome();renderGames();renderPlayers();renderScorers();renderTeamStats();renderTeamPhotos();renderRankingNotas();renderConfratList();}
+function renderAll(){renderHome();renderGames();renderPlayers();renderScorers();renderTeamStats();renderTeamPhotos();renderRankingNotas();renderConfratList();if(typeof renderCampos==="function")renderCampos();}
 
 // ===== HOME =====
 function renderHome(){
@@ -1318,10 +1344,11 @@ window.showPage=function(name,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');btn.classList.add('active');
-  renderAll();updateAdminUI();
+  renderAll();updateAdminUI();renderCampos();updateCampoDropdowns();
   if(name==='whatsapp'){
     renderConfirmList();
     renderPlayerSelectList();
+    updateCampoDropdowns();
     const today=todayStr();
     const next=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
     if(next){
@@ -1335,7 +1362,7 @@ window.showPage=function(name,btn){
 
 // ===== MODALS =====
 window.openModal=function(name){
-  if(name==='addGame'){toggleSF();setTimeout(()=>buildNotasForm(),100);}
+  if(name==='addGame'){toggleSF();setTimeout(()=>buildNotasForm(),100);updateCampoDropdowns();}
   document.getElementById('modal-'+name).classList.add('open');
 };
 window.closeModal=function(name){document.getElementById('modal-'+name).classList.remove('open');};
@@ -1791,6 +1818,11 @@ window.removeGuest=async function(gid){
 window.adjScoreUs=function(d){adjScore(window._currentGameId,'us',d);};
 window.adjScoreThem=function(d){adjScore(window._currentGameId,'them',d);};
 // ===== GOOGLE MAPS =====
+window.openMaps_addr=function(btn){
+  var addr=btn.dataset.addr;
+  if(addr)window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(addr),'_blank');
+};
+
 window.openMaps=function(prefix){
   var addr=document.getElementById(prefix+'-address');
   var loc=document.getElementById(prefix+'-location');
@@ -1866,6 +1898,127 @@ window.updateMapsLink=function(prefix){
   var hasVal=(addr&&addr.value.trim())||(loc&&loc.value.trim());
   if(btn)btn.style.color=hasVal?'#4285F4':'var(--tm)';
 };
+
+// ===== CAMPOS (FIELDS) MANAGEMENT =====
+var _campos = JSON.parse(localStorage.getItem('ifc_campos')||'[]');
+
+function saveCampos(){localStorage.setItem('ifc_campos',JSON.stringify(_campos));}
+
+window.addCampo=function(){
+  var nameEl=document.getElementById('campo-name-input');
+  var addrEl=document.getElementById('campo-addr-input');
+  var name=nameEl?nameEl.value.trim():'';
+  var addr=addrEl?addrEl.value.trim():'';
+  if(!name){showToast('Informe o nome do campo!');return;}
+  var id='c'+Date.now();
+  _campos.push({id:id,name:name,address:addr});
+  saveCampos();
+  if(nameEl)nameEl.value='';
+  if(addrEl)addrEl.value='';
+  renderCampos();
+  updateCampoDropdowns();
+  showToast('Campo adicionado!');
+};
+
+window.removeCampo=function(id){
+  if(!confirm('Remover campo?'))return;
+  _campos=_campos.filter(function(c){return c.id!==id;});
+  saveCampos();
+  renderCampos();
+  updateCampoDropdowns();
+  showToast('Campo removido!');
+};
+
+window.selectCampo=function(prefix, id){
+  var campo=_campos.find(function(c){return c.id===id;});
+  if(!campo)return;
+  var locEl=document.getElementById(prefix+'-location');
+  var addrEl=document.getElementById(prefix+'-address');
+  if(locEl)locEl.value=campo.name;
+  if(addrEl)addrEl.value=campo.address||'';
+  updateMapsLink(prefix);
+};
+
+function renderCampos(){
+  var el=document.getElementById('camposList');
+  if(!el)return;
+  if(_campos.length===0){
+    el.innerHTML='<div style="font-size:.75rem;color:var(--tm);text-align:center;padding:10px">Nenhum campo cadastrado</div>';
+    return;
+  }
+  el.innerHTML=_campos.map(function(c){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;background:var(--s2);border:1px solid var(--br);border-radius:8px;margin-bottom:6px">'
+      +'<div style="flex:1">'
+        +'<div style="font-size:.88rem;font-weight:700;color:var(--t)">'+c.name+'</div>'
+        +(c.address?'<div style="font-size:.65rem;color:var(--tm)">'+c.address+'</div>':'<div style="font-size:.65rem;color:var(--tm);font-style:italic">Sem endereco</div>')
+      +'</div>'
+      +(c.address?('<button data-addr="'+c.address+'" onclick="openMaps_addr(this)" style="background:none;border:none;color:#4285F4;cursor:pointer;font-size:1.1rem;">📍</button>'):'')
+      +'<button data-cid="'+c.id+'" onclick="removeCampo(this.dataset.cid)" style="background:none;border:none;color:#F87171;cursor:pointer;font-size:.8rem;">🗑️</button>'
+      +'</div>';
+  }).join('');
+}
+
+function updateCampoDropdowns(){
+  ['g','wa'].forEach(function(prefix){
+    var sel=document.getElementById(prefix+'-campo-select');
+    if(!sel)return;
+    var current=sel.value;
+    sel.innerHTML='<option value="">-- Selecionar campo --</option>'
+      +_campos.map(function(c){
+        return '<option value="'+c.id+'"'+(c.id===current?' selected':'')+'>'+c.name+(c.address?' ('+c.address.substring(0,25)+'...)':'')+'</option>';
+      }).join('');
+  });
+}
+
+// ===== PLAYER SELECTION FOR GROUP CONVOCATION =====
+var _selectedPlayers = {};
+
+window.selectAllPlayers=function(val){
+  cache.players.forEach(function(p){
+    _selectedPlayers[p.id]=val;
+    var cb=document.getElementById('psel_'+p.id);
+    if(cb)cb.checked=val;
+  });
+  updateSelectedCount();
+};
+
+function updateSelectedCount(){
+  var count=Object.values(_selectedPlayers).filter(Boolean).length;
+  var el=document.getElementById('selectedCount');
+  if(el)el.textContent=count+' selecionado'+(count!==1?'s':'');
+}
+
+window.togglePlayerSelect=function(pid){
+  _selectedPlayers[pid]=!_selectedPlayers[pid];
+  updateSelectedCount();
+};
+
+function renderPlayerSelectList(){
+  var el=document.getElementById('playerSelectList');
+  if(!el)return;
+  if(cache.players.length===0){
+    el.innerHTML='<div style="font-size:.75rem;color:var(--tm);text-align:center;padding:10px">Adicione jogadores primeiro</div>';
+    return;
+  }
+  var html='';
+  cache.players.forEach(function(p){
+    var av=p.photo?'<img src="'+p.photo+'" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0">':('<span style="font-size:1.1rem;flex-shrink:0">'+(p.emoji||'?')+'</span>');
+    var checked=_selectedPlayers[p.id]?'checked':'';
+    var isConf=cache.confirmed.includes(p.id);
+    var isAbsent=cache.absent.includes(p.id);
+    var badge=isConf?'<span style="font-size:.58rem;color:#4ADE80;margin-left:3px">OK</span>':isAbsent?'<span style="font-size:.58rem;color:#F87171;margin-left:3px">NAO</span>':'';
+    html+='<label style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--br);cursor:pointer;">'
+      +'<input type="checkbox" id="psel_'+p.id+'" data-pid="'+p.id+'" '+checked+' onchange="togglePlayerSelect(this.dataset.pid)" style="width:18px;height:18px;accent-color:var(--cr);cursor:pointer;flex-shrink:0">'
+      +av
+      +'<div style="flex:1">'
+        +'<div style="font-size:.88rem;font-weight:600">'+(p.nick||p.name)+badge+'</div>'
+        +'<div style="font-size:.6rem;color:var(--tm)">'+(p.pos||'-')+'</div>'
+      +'</div>'
+      +'</label>';
+  });
+  el.innerHTML=html;
+  updateSelectedCount();
+}
 
 // ===== FIX GERAR CONVOCACAO GRUPO =====
 window.gerarConvocacaoGrupo=function(){
