@@ -340,19 +340,19 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       <button class="btn-can" style="flex:1;margin-top:0" onclick="limparConf()">🗑️ Limpar</button>
     </div>
   </div>
-  <div class="sh"><h2>📱 CONVOCAR INDIVIDUAL</h2><div class="sl"></div></div>
-  <div style="display:flex;gap:8px;margin-bottom:10px">
-    <button class="btn-wa" style="flex:1" onclick="convocarTodos()">
-      📲 CONVOCAR TODOS EM SEQUÊNCIA
-    </button>
-  </div>
-  <div id="convocarTodosStatus" style="display:none;background:var(--s2);border:1px solid var(--br);border-radius:10px;padding:12px;margin-bottom:10px;text-align:center;">
-    <div style="font-family:Cinzel,serif;font-size:.9rem;color:var(--gb)" id="convocarTodosTitle">Abrindo WhatsApp...</div>
-    <div style="font-size:.75rem;color:var(--tm);margin-top:4px" id="convocarTodosInfo"></div>
-    <div style="display:flex;gap:8px;margin-top:10px;justify-content:center">
-      <button onclick="convocarProximo()" style="background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:20px;padding:8px 18px;color:white;font-family:Cinzel,serif;font-size:.8rem;cursor:pointer;">➡️ PRÓXIMO</button>
-      <button onclick="pararConvocar()" style="background:none;border:1px solid var(--br);border-radius:20px;padding:8px 18px;color:var(--tm);font-family:Rajdhani,sans-serif;font-size:.85rem;cursor:pointer;">⏹ PARAR</button>
+  <div class="sh"><h2>📋 SELECIONAR PARA CONVOCAR</h2><div class="sl"></div></div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;gap:7px;margin-bottom:10px">
+      <button onclick="selectAllPlayers(true)" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--br);border-radius:8px;color:var(--gb);font-family:Cinzel,serif;font-size:.72rem;cursor:pointer;">TODOS</button>
+      <button onclick="selectAllPlayers(false)" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--br);border-radius:8px;color:var(--tm);font-family:Rajdhani,sans-serif;font-size:.82rem;cursor:pointer;">LIMPAR</button>
     </div>
+    <div id="playerSelectList"></div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--br);display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:.72rem;color:var(--tm)" id="selectedCount">0 selecionados</span>
+    </div>
+    <button class="btn-wa" style="margin-top:8px" onclick="gerarConvocacaoGrupo()">
+      📲 GERAR CONVOCAÇÃO DO GRUPO
+    </button>
   </div>
   <div class="card" style="margin-bottom:12px">
     <div style="font-size:.7rem;color:var(--tm);margin-bottom:10px;letter-spacing:1px">Toque no WhatsApp para convocar individualmente</div>
@@ -1215,151 +1215,7 @@ window.saveConfrat=async function(){
   showSync(false);
 };
 
-function renderIndividualWA(){
-  var el=document.getElementById('individualWAList');
-  if(!el)return;
-  if(cache.players.length===0){
-    el.innerHTML='<div class="es"><div class="ei">👥</div><p>Adicione jogadores primeiro</p></div>';
-    return;
-  }
-  var today=todayStr();
-  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
-  var dt=nextGame?nextGame.date:document.getElementById('wa-date').value;
-  var tm=nextGame?nextGame.time:document.getElementById('wa-time').value;
-  var lc=nextGame?nextGame.location:document.getElementById('wa-location').value.trim();
-  var op=nextGame?nextGame.opponent:document.getElementById('wa-opponent').value.trim();
-  var valor=document.getElementById('wa-valor').value.trim()||'25';
-  var appUrl='https://andersonveloso0503-cmyk.github.io/-invictos-fc';
-  
-  el.innerHTML=cache.players.map(function(p){
-    var av=p.photo?'<img src="'+p.photo+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0">':('<span style="font-size:1.3rem;flex-shrink:0">'+(p.emoji||'?')+'</span>');
-    var isConf=cache.confirmed.includes(p.id);
-    var isAbsent=cache.absent.includes(p.id);
-    var badge=isConf?'<span style="font-size:.6rem;color:#4ADE80;margin-left:4px">✅</span>':isAbsent?'<span style="font-size:.6rem;color:#F87171;margin-left:4px">❌</span>':'';
-    
-    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--br)">'
-      +av
-      +'<div style="flex:1">'
-        +'<div style="font-size:.88rem;font-weight:600">'+(p.nick||p.name)+badge+'</div>'
-        +'<div style="font-size:.6rem;color:var(--tm)">'+(p.pos||'-')+'</div>'
-      +'</div>'
-      +'<button data-pid="'+p.id+'" data-name="'+(p.nick||p.name.split(' ')[0])+'" data-op="'+op+'" data-dt="'+dt+'" data-tm="'+tm+'" data-lc="'+lc+'" data-val="'+valor+'" onclick="sendIndividualWA(this)" style="background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:20px;padding:7px 12px;color:white;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:4px;">'
-        +'📲 WA'
-      +'</button>'
-    +'</div>';
-  }).join('');
-}
 
-// ===== CONVOCAR TODOS EM SEQUÊNCIA =====
-var _convocandoIndex = 0;
-var _convocandoList = [];
-var _convocandoMsg = '';
-
-window.convocarTodos=function(){
-  var today=todayStr();
-  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
-  var dt=nextGame?nextGame.date:document.getElementById('wa-date').value;
-  var tm=nextGame?nextGame.time:document.getElementById('wa-time').value;
-  var lc=nextGame?nextGame.location:document.getElementById('wa-location').value.trim();
-  var op=nextGame?nextGame.opponent:document.getElementById('wa-opponent').value.trim();
-  var valor=document.getElementById('wa-valor').value.trim()||'25';
-  var appUrl='https://andersonveloso0503-cmyk.github.io/-invictos-fc';
-  var nl='\n';
-
-  if(!op){showToast('Preencha o adversario primeiro!');return;}
-  if(cache.players.length===0){showToast('Nenhum jogador no elenco!');return;}
-
-  // Build list and base message
-  _convocandoList=cache.players;
-  _convocandoIndex=0;
-  
-  // Store game info for building messages
-  window._convData={dt:dt,tm:tm,lc:lc,op:op,valor:valor,appUrl:appUrl,nl:nl};
-  
-  // Show status panel
-  document.getElementById('convocarTodosStatus').style.display='block';
-  
-  // Open first
-  convocarProximo();
-};
-
-window.convocarProximo=function(){
-  if(_convocandoIndex>=_convocandoList.length){
-    // Done!
-    document.getElementById('convocarTodosTitle').textContent='TODOS CONVOCADOS!';
-    document.getElementById('convocarTodosInfo').textContent='Convocacao enviada para '+_convocandoList.length+' jogadores';
-    document.getElementById('convocarTodosStatus').style.backgroundColor='rgba(34,197,94,0.1)';
-    setTimeout(function(){pararConvocar();},3000);
-    return;
-  }
-  
-  var p=_convocandoList[_convocandoIndex];
-  var d=window._convData;
-  var nl=d.nl;
-  var name=p.nick||p.name.split(' ')[0];
-  
-  // Update status
-  var remaining=_convocandoList.length-_convocandoIndex-1;
-  document.getElementById('convocarTodosTitle').textContent=((_convocandoIndex+1)+' de '+_convocandoList.length+' — '+name);
-  document.getElementById('convocarTodosInfo').textContent=(remaining>0?(remaining+' jogador'+(remaining!==1?'es':'')+' restante'):'Ultimo jogador!');
-  
-  // Build message
-  var msg='Oi '+name+'! '+nl+nl;
-  msg+='INVICTOS FC te convoca!'+nl+nl;
-  if(d.op)msg+='Invictos FC vs '+d.op+nl;
-  if(d.dt)msg+=fmtDateWA(d.dt);
-  if(d.tm)msg+=' as '+d.tm+'h';
-  if(d.dt||d.tm)msg+=nl;
-  if(d.lc)msg+=d.lc+nl;
-  msg+='Valor: R$ '+d.valor+',00'+nl;
-  msg+='Nao esqueca o uniforme!'+nl+nl;
-  msg+='Vai conseguir jogar?'+nl+nl;
-  msg+='SIM: '+d.appUrl+'?confirm='+p.id+nl;
-  msg+='NAO: '+d.appUrl+'?absent='+p.id+nl+nl;
-  msg+='Invictos FC - Nunca Rendidos!';
-  
-  // Open WhatsApp
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-  
-  _convocandoIndex++;
-};
-
-window.pararConvocar=function(){
-  _convocandoIndex=0;
-  _convocandoList=[];
-  var el=document.getElementById('convocarTodosStatus');
-  el.style.display='none';
-  el.style.backgroundColor='';
-  document.getElementById('convocarTodosTitle').textContent='Abrindo WhatsApp...';
-};
-
-window.sendIndividualWA=function(btn){
-  var pid=btn.dataset.pid;
-  var name=btn.dataset.name;
-  var op=btn.dataset.op||'Proximo jogo';
-  var dt=btn.dataset.dt;
-  var tm=btn.dataset.tm;
-  var lc=btn.dataset.lc;
-  var val=btn.dataset.val||'25';
-  var appUrl='https://andersonveloso0503-cmyk.github.io/-invictos-fc';
-  var nl='\n';
-  
-  var msg='Oi '+name+'! '+nl+nl;
-  msg+='INVICTOS FC te convoca!'+nl+nl;
-  if(op)msg+='Invictos FC vs '+op+nl;
-  if(dt)msg+=fmtDateWA(dt);
-  if(tm)msg+=' as '+tm+'h';
-  if(dt||tm)msg+=nl;
-  if(lc)msg+=lc+nl;
-  msg+='Valor: R$ '+val+',00'+nl;
-  msg+='Nao esqueca o uniforme!'+nl+nl;
-  msg+='Vai conseguir jogar?'+nl+nl;
-  msg+='SIM: '+appUrl+'?confirm='+pid+nl;
-  msg+='NAO: '+appUrl+'?absent='+pid+nl+nl;
-  msg+='Invictos FC - Nunca Rendidos!';
-  
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-};
 
 function renderConfratList(){
   var el=document.getElementById('confratList');if(!el)return;
@@ -1395,7 +1251,7 @@ window.showPage=function(name,btn){
   renderAll();updateAdminUI();
   if(name==='whatsapp'){
     renderConfirmList();
-    renderIndividualWA();
+    renderPlayerSelectList();
     const today=todayStr();
     const next=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
     if(next){
