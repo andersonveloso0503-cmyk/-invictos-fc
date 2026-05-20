@@ -705,26 +705,24 @@ function renderHome(){
     const du=daysUntil(n.date);
     const confCount=cache.confirmed.length;
     const confNames=cache.players.filter(p=>cache.confirmed.includes(p.id)).slice(0,3).map(p=>p.nick||p.name.split(' ')[0]).join(', ');
-    ns.innerHTML=`<div class="ngc ${isLive?'live':''}" onclick="openGameDetail('${n.id}')">
-      <div class="ng-top">
-        <div class="ng-lbl">⚡ ${isLive?'JOGO AO VIVO':'PRÓXIMO JOGO'}</div>
-        ${isLive?'<div class="ng-live-badge">🔴 AO VIVO</div>':`<div class="ng-countdown" style="color:${du?du.color:'var(--tm)'}">${du?du.txt:''}</div>`}
-      </div>
-      <div class="ng-teams">
-        <div class="ng-team">Invictos FC</div>
-        ${isLive&&n.liveUs!=null?`<div class="ng-score">${n.liveUs||0}<span>×</span>${n.liveThem||0}</div>`:`<div class="vs">VS</div>`}
-        <div class="ng-team" style="text-align:right">${n.opponent}</div>
-      </div>
-      <div class="ng-info">
-        <div class="ng-det">📅 ${fmtDate(n.date)}</div>
-        ${n.time?`<div class="ng-det">🕐 ${n.time}</div>`:''}
-        ${n.location?`<div class="ng-det">📍 ${n.location}</div>`:''}
-      </div>
-      ${confCount>0?`<div class="ng-conf"><span>✅</span><span class="ng-conf-count">${confCount}</span><span>confirmado${confCount!==1?'s':''}</span>${confNames?`<span>· ${confNames}${confCount>3?'...':''}</span>`:''}</div>`:''}
-      <div class="ng-tap">👆 Toque para detalhes e placar</div>
-      ${isLive?'<div style="font-size:.65rem;color:#4ADE80;text-align:center;margin-top:4px;letter-spacing:1px">🔒 Lista encerrada durante o jogo</div>':''}
-      ${upcoming.length>1?`<div style="font-size:.62rem;color:var(--tm);margin-top:6px;padding-top:6px;border-top:1px solid var(--br)">Próximos: ${upcoming.slice(1,3).map(g=>`${fmtDate(g.date)} vs ${g.opponent}`).join(' · ')}</div>`:''}
-    </div>`;
+    var ngClass=isLive?'live':'';
+    var ngBadge=isLive?'<div class="ng-live-badge">🔴 AO VIVO</div>':('<div class="ng-countdown" style="color:'+(du?du.color:'var(--tm)')+'">'+( du?du.txt:'')+'</div>');
+    var ngScore=isLive&&n.liveUs!=null?('<div class="ng-score">'+(n.liveUs||0)+'<span>x</span>'+(n.liveThem||0)+'</div>'):'<div class="vs">VS</div>';
+    var mapsQng=n.address||n.location||'';
+    var ngLoc=n.location?('<div class="ng-det">📍 '+n.location+(mapsQng?' <span style="color:#4285F4;font-size:.6rem;cursor:pointer" data-mapurl="'+encodeURIComponent(mapsQng)+'" onclick="event.stopPropagation();openMapsFromData(this)">🗺️</span>':'')+'</div>'):'';
+    var ngTime=n.time?('<div class="ng-det">🕐 '+n.time+'</div>'):'';
+    var ngDate=n.date?('<div class="ng-det">📅 '+fmtDate(n.date)+'</div>'):'';
+    var ngConf=cache.confirmed.length>0?('<div class="ng-conf"><span class="ng-conf-count">✅ '+cache.confirmed.length+'</span> confirmado'+(cache.confirmed.length!==1?'s':'')+'</div>'):'';
+    var ngLiveMsg=isLive?'<div style="font-size:.65rem;color:#4ADE80;text-align:center;margin-top:4px">🔒 Lista encerrada durante o jogo</div>':'';
+    var ngTap='<div style="font-size:.6rem;color:var(--g);text-align:center;margin-top:5px;letter-spacing:1px">👆 Toque para detalhes e placar</div>';
+    window._nextGameId=n.id;
+    ns.innerHTML='<div class="ngc '+ngClass+'" onclick="openGameDetail(window._nextGameId)">'
+      +'<div class="ng-top"><div class="ng-lbl">⚡ '+(isLive?'JOGO AO VIVO':'PRÓXIMO JOGO')+'</div>'+ngBadge+'</div>'
+      +'<div class="ng-teams"><div class="ng-team">Invictos FC</div>'+ngScore+'<div class="ng-team" style="text-align:right">'+n.opponent+'</div></div>'
+      +'<div class="ng-info">'+ngDate+ngTime+ngLoc+'</div>'
+      +ngConf+ngTap+ngLiveMsg
+      +'</div>';
+
   }else{
     ns.innerHTML=`<div class="ngc" style="text-align:center;padding:14px;cursor:default">
       <div style="font-size:1.3rem;margin-bottom:5px">✅</div>
