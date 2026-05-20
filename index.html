@@ -793,63 +793,24 @@ window.openGameDetail=function(gid){
   var campoOpts='<option value="">-- Selecionar campo --</option>'
     +(_campos||[]).map(function(c){return'<option value="'+c.id+'"'+(c.name===g.location?' selected':'')+'>'+c.name+'</option>';}).join('');
   
-  var locHTML='<div style="margin-bottom:12px;padding:10px;background:var(--s2);border:1px solid var(--br);border-radius:8px">'
-    +'<div style="font-size:.65rem;color:var(--tm);letter-spacing:2px;margin-bottom:8px">📍 ENDEREÇO DO CAMPO</div>'
-    +'<div style="margin-bottom:6px">'
-      +'<select class="fsel" id="gd-campo-select" onchange="selectCampo_gd(this.value)" style="margin-bottom:5px">'
-        +campoOpts
-      +'</select>'
-      +'<input class="fi" id="gd-location" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px">'
-      +'<div style="display:flex;gap:6px">'
-        +'<input class="fi" id="gd-address" value="'+(g.address||'')+'" placeholder="Endereco completo..." style="flex:1">'
-        +(mapsQ?'<button data-url="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(mapsQ)+'" onclick="openMapsFromData(this)" style="background:none;border:1px solid #4285F4;border-radius:7px;padding:0 10px;color:#4285F4;cursor:pointer;flex-shrink:0">📍</button>':'')
-      +'</div>'
-    +'</div>'
-    +'</div>';
-  var scHTML=g.scorers?'<div class="ginf" style="margin-top:8px">Gols: <span>'+g.scorers+'</span></div>':'';
-  var asHTML=g.assists?'<div class="ginf">Ass.: <span>'+g.assists+'</span></div>':'';
-  var confHTML='';
-  if(confPlayers.length>0){
-    var chips=confPlayers.map(function(p){
-      var pav=p.photo?'<img src="'+p.photo+'" style="width:18px;height:18px;border-radius:50%;object-fit:cover">':('<span>'+(p.emoji||'?')+'</span>');
-      return '<div class="conf-chip">'+pav+(p.nick||p.name.split(' ')[0])+'</div>';
-    }).join('');
-    confHTML='<div style="margin-top:12px"><div class="fl" style="margin-bottom:6px">CONFIRMADOS ('+confPlayers.length+')</div><div style="display:flex;flex-wrap:wrap">'+chips+'</div></div>';
+    var mapsQ=g.address||g.location||'';
+  var mapsEnc=mapsQ?encodeURIComponent(mapsQ):'';
+  var mapsBtn=mapsQ?('<button data-mapurl="'+mapsEnc+'" onclick="openMapsFromData(this)" style="background:none;border:1px solid #4285F4;border-radius:7px;padding:6px 12px;color:#4285F4;cursor:pointer">📍 Ver no Maps</button>'):'';
+  var campoOpts='<option value="">-- Selecionar campo --</option>'+(_campos||[]).map(function(c){return'<option value="'+c.id+'"'+(c.name===g.location?' selected':'')+'>'+c.name+'</option>';}).join('');
+  var locHTML='<div style="margin-bottom:12px;padding:10px;background:var(--s2);border:1px solid var(--br);border-radius:8px">';
+  locHTML+='<div style="font-size:.65rem;color:var(--g);letter-spacing:2px;margin-bottom:8px;font-family:Cinzel,serif">📍 LOCAL DO JOGO</div>';
+  if(isAdmin){
+    locHTML+='<select class="fsel" id="gd-campo-select" onchange="selectCampo_gd(this.value)" style="margin-bottom:5px">'+campoOpts+'</select>';
+    locHTML+='<input class="fi" id="gd-location" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px">';
+    locHTML+='<input class="fi" id="gd-address" value="'+(g.address||'')+'" placeholder="Endereco completo (ex: Rua X, 100 - POA)">';
+    locHTML+='<button class="btn-sub" style="margin-top:8px" onclick="saveLocation(window._currentGameId)">💾 SALVAR LOCAL</button>';
+    if(mapsQ)locHTML+='<div style="margin-top:6px">'+mapsBtn+'</div>';
+  } else {
+    locHTML+=(g.location?('<div style="font-size:.92rem;font-weight:600;color:var(--t);margin-bottom:3px">'+g.location+'</div>'):'<div style="font-size:.8rem;color:var(--tm);font-style:italic">Local nao definido</div>');
+    locHTML+=(g.address?('<div style="font-size:.7rem;color:var(--tm);margin-bottom:6px">'+g.address+'</div>'):'');
+    if(mapsQ)locHTML+=mapsBtn;
   }
-  var absHTML='';
-  if(absentPlayers.length>0){
-    var achips=absentPlayers.map(function(p){return '<div class="abs-chip">'+(p.nick||p.name.split(' ')[0])+'</div>';}).join('');
-    absHTML='<div style="margin-top:8px"><div class="fl" style="margin-bottom:6px">AUSENTES ('+absentPlayers.length+')</div><div style="display:flex;flex-wrap:wrap">'+achips+'</div></div>';
-  }
-  var waBtn=isLive&&isAdmin?'<button class="btn-wa" style="margin-top:10px" onclick="sendPostGameWA(window._currentGameId)">Enviar pedido de notas</button>':'';
-
-  // Guests section
-  var gameGuests=cache.guests.filter(function(gu){return gu.gameId===gid;});
-  var guestsHTML='<div style="margin-top:14px">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
-    +'<div style="font-family:Cinzel,serif;font-size:.82rem;color:var(--gb);letter-spacing:2px">CONVIDADOS</div>'
-    +'<div style="flex:1;height:1px;background:linear-gradient(90deg,var(--gd),transparent)"></div>'
-    +'<span style="font-size:.7rem;color:var(--tm)">'+gameGuests.length+' convidado'+(gameGuests.length!==1?'s':'')+'</span>'
-    +'</div>';
-
-  if(gameGuests.length>0){
-    guestsHTML+=gameGuests.map(function(gu){
-      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;margin-bottom:5px;">'
-        +'<span style="font-size:1rem">👤</span>'
-        +'<div style="flex:1"><div style="font-size:.88rem;font-weight:600;color:var(--t)">'+gu.name+'</div>'
-        +(gu.note?'<div style="font-size:.65rem;color:var(--tm)">'+gu.note+'</div>':'')
-        +'</div>'
-        +'<button data-gid="'+gu.id+'" onclick="removeGuest(this.dataset.gid)" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);border-radius:50%;width:22px;height:22px;color:#F87171;cursor:pointer;font-size:.7rem;display:flex;align-items:center;justify-content:center;">X</button>'
-        +'</div>';
-    }).join('');
-  }
-
-  guestsHTML+='<div style="display:flex;gap:7px;margin-top:8px">'
-    +'<input id="guestNameInput" class="fi" placeholder="Nome do convidado..." style="flex:1;padding:9px 11px;">'
-    +'<input id="guestNoteInput" class="fi" placeholder="Ex: amigo do Nairon" style="flex:1;padding:9px 11px;">'
-    +'</div>'
-    +'<button class="btn-sub" style="margin-top:7px" onclick="addGuest(window._currentGameId)">+ ADICIONAR CONVIDADO</button>'
-    +'</div>';
+    locHTML+='</div>';
 
   document.getElementById('gameDetailContent').innerHTML=
     '<div class="mt2" style="margin-bottom:8px">'+g.opponent+' - '+fmtDate(g.date)+'</div>'
@@ -956,16 +917,27 @@ function gameCardHTML(g,showDel){
   if(showDel===undefined)showDel=true;
   var st=getGameStatus(g);var lc=statusLabel(st);var label=lc[0];var cls=lc[1];
   var fin=g.status!=='agendado';
-  var scoreHTML=fin?(g.goalsUs+'<span style="color:var(--tm);font-size:.95rem;margin:0 2px">x</span>'+g.goalsThem):'<span style="font-size:.85rem">VS</span>';
-  var locHTML=g.location?'<div class="ginf" style="margin-top:4px">Local: '+g.location+'</div>':'';
-  var scHTML=g.scorers?'<div class="ginf">Gols: <span>'+g.scorers+'</span></div>':'';
-  var asHTML=g.assists?'<div class="ginf">Ass.: <span>'+g.assists+'</span></div>':'';
-  var notesHTML=g.notes?'<div class="ginf">'+g.notes+'</div>':'';
-  var delHTML=showDel?'<button class="del-btn admin-only" data-gid="'+g.id+'" onclick="deleteGame(this.dataset.gid)">X</button>':'';
-  return '<div class="gc">'
-    +'<div class="gh"><div class="gd2">'+fmtDate(g.date)+(g.time?' - '+g.time:'')+'</div><div class="gs '+cls+'">'+label+'</div></div>'
+  var isLiveCard=st==='live';
+  var scoreHTML=fin
+    ?(g.goalsUs+'<span style="color:var(--tm);font-size:.95rem;margin:0 2px">x</span>'+g.goalsThem)
+    :(isLiveCard
+      ?('<span style="color:#4ADE80;font-family:Cinzel,serif;font-size:1.4rem;font-weight:900">'+(g.liveUs||0)+'</span><span style="color:var(--tm);margin:0 4px">x</span><span style="color:#4ADE80;font-family:Cinzel,serif;font-size:1.4rem;font-weight:900">'+(g.liveThem||0)+'</span>')
+      :'<span style="font-size:.85rem">VS</span>');
+  var mapsQ=encodeURIComponent(g.address||g.location||'');
+  var mapsSpan=g.address?(' <span style="color:#4285F4;font-size:.6rem;cursor:pointer" data-mapurl="'+mapsQ+'" onclick="event.stopPropagation();openMapsFromData(this)">🗺️</span>'):'';
+  var locHTML=g.location?('<div class="ginf" style="margin-top:4px">📍 '+g.location+mapsSpan+'</div>'):'';
+  var scHTML=g.scorers?'<div class="ginf">⚽ <span>'+g.scorers+'</span></div>':'';
+  var asHTML=g.assists?'<div class="ginf">🎯 <span>'+g.assists+'</span></div>':'';
+  var notesHTML=g.notes?'<div class="ginf" style="color:var(--tm);font-size:.65rem">'+g.notes+'</div>':'';
+  var delHTML=showDel?'<button class="del-btn admin-only" data-gid="'+g.id+'" onclick="event.stopPropagation();deleteGame(this.dataset.gid)">🗑</button>':'';
+  var isClickable=!fin||st==='live';
+  var cardClick=isClickable?('onclick="openGameDetail(\''+g.id+'\'" style="cursor:pointer"'):'';
+  return '<div class="gc" '+cardClick+'>'
+    +'<div class="gh"><div class="gd2">'+fmtDate(g.date)+(g.time?' · '+g.time:'')+'</div><div class="gs '+cls+'">'+label+'</div></div>'
     +'<div class="gsr"><div class="gt">Invictos FC</div><div class="gsc">'+scoreHTML+'</div><div class="gt r">'+g.opponent+'</div></div>'
-    +locHTML+scHTML+asHTML+notesHTML+delHTML+'</div>';
+    +locHTML+scHTML+asHTML+notesHTML+delHTML
+    +(isClickable?'<div style="font-size:.6rem;color:var(--g);text-align:center;margin-top:5px;letter-spacing:1px">👆 Toque para editar local/placar</div>':'')
+    +'</div>';
 }
 
 function renderGames(filter='todos'){
@@ -1835,6 +1807,23 @@ window.removeGuest=async function(gid){
 window.adjScoreUs=function(d){adjScore(window._currentGameId,'us',d);};
 window.adjScoreThem=function(d){adjScore(window._currentGameId,'them',d);};
 // ===== GOOGLE MAPS =====
+window.saveLocation=async function(gid){
+  var g=cache.games.find(function(x){return x.id===gid;});
+  if(!g)return;
+  var location=document.getElementById('gd-location')?document.getElementById('gd-location').value.trim():g.location||'';
+  var address=document.getElementById('gd-address')?document.getElementById('gd-address').value.trim():g.address||'';
+  showSync(true);
+  try{
+    await setDoc(doc(db,'games',gid),Object.assign({},g,{location:location,address:address}));
+    var idx=cache.games.findIndex(function(x){return x.id===gid;});
+    if(idx>=0)cache.games[idx]=Object.assign({},cache.games[idx],{location:location,address:address});
+    saveLocal();renderHome();
+    showToast('Local salvo! ✅');
+    openGameDetail(gid);
+  }catch(e){showToast('Erro: '+e.message);}
+  showSync(false);
+};
+
 window.openMapsFromData=function(btn){
   var encoded=btn.dataset.mapurl||btn.dataset.url||'';
   if(!encoded)return;
