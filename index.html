@@ -716,7 +716,7 @@ function renderHome(){
     var ngLiveMsg=isLive?'<div style="font-size:.65rem;color:#4ADE80;text-align:center;margin-top:4px">🔒 Lista encerrada durante o jogo</div>':'';
     var ngTap='<div style="font-size:.6rem;color:var(--g);text-align:center;margin-top:5px;letter-spacing:1px">👆 Toque para detalhes e placar</div>';
     window._nextGameId=n.id;
-    ns.innerHTML='<div class="ngc '+ngClass+'" onclick="openGameDetail(window._nextGameId)">'
+    ns.innerHTML='<div class="ngc '+ngClass+'" id="nextGameCard" data-gid="'+n.id+'">'
       +'<div class="ng-top"><div class="ng-lbl">⚡ '+(isLive?'JOGO AO VIVO':'PRÓXIMO JOGO')+'</div>'+ngBadge+'</div>'
       +'<div class="ng-teams"><div class="ng-team">Invictos FC</div>'+ngScore+'<div class="ng-team" style="text-align:right">'+n.opponent+'</div></div>'
       +'<div class="ng-info">'+ngDate+ngTime+ngLoc+'</div>'
@@ -724,10 +724,10 @@ function renderHome(){
       +'</div>';
 
   }else{
-    ns.innerHTML=`<div class="ngc" style="text-align:center;padding:14px;cursor:default">
-      <div style="font-size:1.3rem;margin-bottom:5px">✅</div>
-      <div style="font-family:'Cinzel',serif;font-size:.82rem;color:var(--g);letter-spacing:1px">Nenhum jogo agendado</div>
-    </div>`;
+    ns.innerHTML='<div class="ngc" style="text-align:center;padding:14px">'
+      +'<div style="font-size:1.3rem;margin-bottom:5px">✅</div>'
+      +'<div style="font-family:Cinzel,serif;font-size:.82rem;color:var(--g);letter-spacing:1px">Nenhum jogo agendado</div>'
+      +'</div>';
   }
   const recent=cache.games.filter(g=>g.status!=='agendado').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3);
   document.getElementById('recentGames').innerHTML=recent.length===0?`<div class="es"><div class="ei">⚽</div><p>Nenhum jogo registrado</p></div>`:recent.map(g=>gameCardHTML(g,false)).join('');
