@@ -795,22 +795,35 @@ window.openGameDetail=function(gid){
   
     var mapsQ=g.address||g.location||'';
   var mapsEnc=mapsQ?encodeURIComponent(mapsQ):'';
-  var mapsBtn=mapsQ?('<button data-mapurl="'+mapsEnc+'" onclick="openMapsFromData(this)" style="background:none;border:1px solid #4285F4;border-radius:7px;padding:6px 12px;color:#4285F4;cursor:pointer">📍 Ver no Maps</button>'):'';
-  var campoOpts='<option value="">-- Selecionar campo --</option>'+(_campos||[]).map(function(c){return'<option value="'+c.id+'"'+(c.name===g.location?' selected':'')+'>'+c.name+'</option>';}).join('');
-  var locHTML='<div style="margin-bottom:12px;padding:10px;background:var(--s2);border:1px solid var(--br);border-radius:8px">';
-  locHTML+='<div style="font-size:.65rem;color:var(--g);letter-spacing:2px;margin-bottom:8px;font-family:Cinzel,serif">📍 LOCAL DO JOGO</div>';
+  var mapsBtn=mapsQ?('<button data-mapurl="'+mapsEnc+'" onclick="openMapsFromData(this)" style="width:100%;padding:9px;background:none;border:1px solid #4285F4;border-radius:8px;color:#4285F4;cursor:pointer;margin-top:6px;font-size:.82rem;">📍 Abrir no Google Maps</button>'):'';
+  var campoOpts='<option value="">-- Selecionar campo salvo --</option>'+(_campos||[]).map(function(c){return'<option value="'+c.id+'"'+(c.name===g.location?' selected':'')+'>'+c.name+(c.address?' · '+c.address.substring(0,20)+'...':'')+'</option>';}).join('');
+
+  var locHTML='<div style="background:var(--s2);border:1px solid rgba(201,168,76,0.3);border-radius:10px;padding:12px;margin-bottom:12px">'
+    +'<div style="font-size:.62rem;color:var(--g);letter-spacing:3px;font-family:Cinzel,serif;margin-bottom:10px">📍 LOCAL DO JOGO</div>';
+
   if(isAdmin){
-    locHTML+='<select class="fsel" id="gd-campo-select" onchange="selectCampo_gd(this.value)" style="margin-bottom:5px">'+campoOpts+'</select>';
-    locHTML+='<input class="fi" id="gd-location" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px">';
-    locHTML+='<input class="fi" id="gd-address" value="'+(g.address||'')+'" placeholder="Endereco completo (ex: Rua X, 100 - POA)">';
-    locHTML+='<button class="btn-sub" style="margin-top:8px" onclick="saveLocation(window._currentGameId)">💾 SALVAR LOCAL</button>';
-    if(mapsQ)locHTML+='<div style="margin-top:6px">'+mapsBtn+'</div>';
+    locHTML+=''
+      // Dropdown campos salvos
+      +'<div style="font-size:.62rem;color:var(--tm);letter-spacing:1px;margin-bottom:4px">CAMPO SALVO</div>'
+      +'<select class="fsel" id="gd-campo-select" onchange="selectCampo_gd(this.value)" style="margin-bottom:8px">'+campoOpts+'</select>'
+      // Nome do campo
+      +'<div style="font-size:.62rem;color:var(--tm);letter-spacing:1px;margin-bottom:4px">NOME DO LOCAL</div>'
+      +'<input class="fi" id="gd-location" value="'+(g.location||'')+'" placeholder="Ex: Bertaco, Leo Bertaco..." style="margin-bottom:8px">'
+      // Endereco
+      +'<div style="font-size:.62rem;color:var(--tm);letter-spacing:1px;margin-bottom:4px">ENDEREÇO COMPLETO</div>'
+      +'<input class="fi" id="gd-address" value="'+(g.address||'')+'" placeholder="Ex: Rua X, 100 - Porto Alegre">'
+      // Botao salvar local
+      +'<button onclick="saveLocation(window._currentGameId)" style="width:100%;margin-top:8px;padding:10px;background:linear-gradient(135deg,var(--cr),var(--crd));border:1px solid var(--gd);border-radius:8px;color:var(--gb);font-family:Cinzel,serif;font-size:.82rem;font-weight:700;cursor:pointer;letter-spacing:1px">💾 SALVAR ENDEREÇO</button>'
+      // Botao maps
+      +mapsBtn;
   } else {
-    locHTML+=(g.location?('<div style="font-size:.92rem;font-weight:600;color:var(--t);margin-bottom:3px">'+g.location+'</div>'):'<div style="font-size:.8rem;color:var(--tm);font-style:italic">Local nao definido</div>');
-    locHTML+=(g.address?('<div style="font-size:.7rem;color:var(--tm);margin-bottom:6px">'+g.address+'</div>'):'');
-    if(mapsQ)locHTML+=mapsBtn;
+    // Viewer mode
+    locHTML+=(g.location?('<div style="font-size:.95rem;font-weight:700;color:var(--t);margin-bottom:3px">'+g.location+'</div>'):'<div style="font-size:.8rem;color:var(--tm);font-style:italic">Local ainda nao definido</div>');
+    locHTML+=(g.address?('<div style="font-size:.72rem;color:var(--tm);margin-bottom:6px">'+g.address+'</div>'):'');
+    locHTML+=mapsBtn;
   }
-    locHTML+='</div>';
+  locHTML+='</div>';
+
 
   document.getElementById('gameDetailContent').innerHTML=
     '<div class="mt2" style="margin-bottom:8px">'+g.opponent+' - '+fmtDate(g.date)+'</div>'
