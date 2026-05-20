@@ -256,7 +256,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div class="hero-motto">NUNCA RENDIDOS · SEMPRE GUERREIROS</div>
   </div>
   <div class="srow" id="homeStats"></div>
-  <div id="nextGameSection" onclick="onNextGameClick(event)"></div>
+  <div id="nextGameSection"></div>
   <div id="bestPlayerSection"></div>
   <div class="sh"><h2>ÚLTIMOS JOGOS</h2><div class="sl"></div></div>
   <div id="recentGames"></div>
@@ -284,25 +284,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div class="sh"><h2>📍 CAMPOS CADASTRADOS</h2><div class="sl"></div></div>
     <div class="card" style="margin-bottom:10px">
       <div id="camposList"></div>
-      <div class="fg" style="margin-top:10px">
-        <input class="fi" id="campo-name-input" placeholder="Nome do campo (ex: Bertaco)" style="margin-bottom:6px">
+      <div style="margin-top:8px">
+        <input class="fi" id="campo-name-input" placeholder="Nome (ex: Bertaco)" style="margin-bottom:6px">
         <div style="display:flex;gap:6px">
           <input class="fi" id="campo-addr-input" placeholder="Endereço completo" style="flex:1">
-          <button onclick="openMapsFromAddr()" style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:0 12px;color:#4285F4;cursor:pointer;font-size:1.1rem;flex-shrink:0">📍</button>
-        </div>
-        <button class="btn-add admin-only" style="margin-top:8px;margin-bottom:0" onclick="addCampo()">+ ADICIONAR CAMPO</button>
-      </div>
-    </div>
-  </div>
-  <div style="margin-top:16px">
-    <div class="sh"><h2>📍 CAMPOS CADASTRADOS</h2><div class="sl"></div></div>
-    <div class="card" style="margin-bottom:10px">
-      <div id="camposList"></div>
-      <div class="fg" style="margin-top:10px">
-        <input class="fi" id="campo-name-input" placeholder="Nome do campo (ex: Bertaco)" style="margin-bottom:6px">
-        <div style="display:flex;gap:6px">
-          <input class="fi" id="campo-addr-input" placeholder="Endereço completo" style="flex:1">
-          <button onclick="openMapsFromAddr()" style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:0 12px;color:#4285F4;cursor:pointer;font-size:1.1rem;flex-shrink:0">📍</button>
+          <button onclick="openMapsAddr('campo-addr-input')" style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:0 12px;color:#4285F4;cursor:pointer;font-size:1.1rem;flex-shrink:0">📍</button>
         </div>
         <button class="btn-add admin-only" style="margin-top:8px;margin-bottom:0" onclick="addCampo()">+ ADICIONAR CAMPO</button>
       </div>
@@ -314,25 +300,15 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   </div>
 </div>
 
-<!-- ARTILHARIA + NOTAS -->
 <div id="page-artilharia" class="page">
-  <div class="fr" style="margin-bottom:14px">
+  <div class="fr" style="margin-bottom:12px">
     <button class="fb active" onclick="switchArtTab('artilheiros',this)">🎯 Artilheiros</button>
     <button class="fb" onclick="switchArtTab('assistencias',this)">🎯 Assistências</button>
     <button class="fb" onclick="switchArtTab('notas',this)">⭐ Notas</button>
   </div>
-  <div id="artTab-artilheiros">
-    <div class="sh"><h2>ARTILHEIROS</h2><div class="sl"></div></div>
-    <div id="scorersList"></div>
-  </div>
-  <div id="artTab-assistencias" style="display:none">
-    <div class="sh"><h2>ASSISTÊNCIAS</h2><div class="sl"></div></div>
-    <div id="assistsList"></div>
-  </div>
-  <div id="artTab-notas" style="display:none">
-    <div class="sh"><h2>⭐ RANKING DE NOTAS</h2><div class="sl"></div></div>
-    <div id="rankingNotas"></div>
-  </div>
+  <div id="artTab-artilheiros"><div class="sh"><h2>ARTILHEIROS</h2><div class="sl"></div></div><div id="scorersList"></div></div>
+  <div id="artTab-assistencias" style="display:none"><div class="sh"><h2>ASSISTÊNCIAS</h2><div class="sl"></div></div><div id="assistsList"></div></div>
+  <div id="artTab-notas" style="display:none"><div class="sh"><h2>⭐ RANKING NOTAS</h2><div class="sl"></div></div><div id="rankingNotas"></div></div>
 </div>
 
 
@@ -353,15 +329,13 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       <div class="fg"><label class="fl">Horário</label><input class="fi" id="wa-time" type="time"></div>
     </div>
     <div class="fg"><label class="fl">Local / Campo</label>
-      <select class="fsel" id="wa-campo-select" onchange="selectCampo('wa',this.value)" style="margin-bottom:5px">
-        <option value="">-- Selecionar campo cadastrado --</option>
-      </select>
-      <input class="fi" id="wa-location" placeholder="Ou digite o nome do campo">
+      <select class="fsel" id="wa-campo-select" onchange="selectCampo('wa',this.value)" style="margin-bottom:5px"><option value="">-- Selecionar campo --</option></select>
+      <input class="fi" id="wa-location" placeholder="Ou digite o nome">
     </div>
     <div class="fg"><label class="fl">Endereço Google Maps</label>
       <div style="display:flex;gap:6px">
-        <input class="fi" id="wa-address" placeholder="Ex: Rua X, 100 - Porto Alegre" style="flex:1">
-        <button onclick="openMaps('wa')" style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:0 12px;color:#4285F4;cursor:pointer;font-size:1.1rem;flex-shrink:0">📍</button>
+        <input class="fi" id="wa-address" placeholder="Ex: Rua X, 100 - POA" style="flex:1">
+        <button onclick="openMapsWA()" style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:0 12px;color:#4285F4;cursor:pointer;font-size:1.1rem;flex-shrink:0">📍</button>
       </div>
     </div>
     <div class="frow">
@@ -382,23 +356,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   <div class="sh"><h2>📋 SELECIONAR PARA CONVOCAR</h2><div class="sl"></div></div>
   <div class="card" style="margin-bottom:12px">
     <div style="display:flex;gap:7px;margin-bottom:10px">
-      <button onclick="selectAllPlayers(true)" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--br);border-radius:8px;color:var(--gb);font-family:Cinzel,serif;font-size:.72rem;cursor:pointer;">TODOS</button>
-      <button onclick="selectAllPlayers(false)" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--br);border-radius:8px;color:var(--tm);font-family:Rajdhani,sans-serif;font-size:.82rem;cursor:pointer;">LIMPAR</button>
+      <button onclick="selectAllPlayers(true)" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--br);border-radius:8px;color:var(--gb);font-family:Cinzel,serif;font-size:.72rem;cursor:pointer">TODOS</button>
+      <button onclick="selectAllPlayers(false)" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--br);border-radius:8px;color:var(--tm);font-size:.82rem;cursor:pointer">LIMPAR</button>
     </div>
     <div id="playerSelectList" style="max-height:300px;overflow-y:auto"></div>
-    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--br);display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:.72rem;color:var(--tm)" id="selectedCount">0 selecionados</span>
-    </div>
-    <button class="btn-wa" style="margin-top:8px" onclick="gerarConvocacaoGrupo()">📲 GERAR CONVOCAÇÃO DO GRUPO</button>
-  </div>
-  <div class="sh"><h2>📋 SELECIONAR PARA CONVOCAR</h2><div class="sl"></div></div>
-  <div class="card" style="margin-bottom:12px">
-    <div style="display:flex;gap:7px;margin-bottom:10px">
-      <button onclick="selectAllPlayers(true)" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--br);border-radius:8px;color:var(--gb);font-family:Cinzel,serif;font-size:.72rem;cursor:pointer;">TODOS</button>
-      <button onclick="selectAllPlayers(false)" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--br);border-radius:8px;color:var(--tm);font-family:Rajdhani,sans-serif;font-size:.82rem;cursor:pointer;">LIMPAR</button>
-    </div>
-    <div id="playerSelectList" style="max-height:300px;overflow-y:auto"></div>
-    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--br);display:flex;justify-content:space-between;align-items:center">
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--br)">
       <span style="font-size:.72rem;color:var(--tm)" id="selectedCount">0 selecionados</span>
     </div>
     <button class="btn-wa" style="margin-top:8px" onclick="gerarConvocacaoGrupo()">📲 GERAR CONVOCAÇÃO DO GRUPO</button>
@@ -419,11 +381,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 </div>
 
 <nav>
-  <button class="nb active" id="nav-home" onclick="showPage('home',this)"><div class="ni">🏠</div>Home</button>
-  <button class="nb" id="nav-jogos" onclick="showPage('jogos',this)"><div class="ni">⚽</div>Jogos</button>
-  <button class="nb" id="nav-elenco" onclick="showPage('elenco',this)"><div class="ni">👥</div>Elenco</button>
-  <button class="nb" id="nav-artilharia" onclick="showPage('artilharia',this)"><div class="ni">🎯</div>Artilharia</button>
-  <button class="nb" id="nav-whatsapp" onclick="showPage('whatsapp',this)"><div class="ni">📲</div>WhatsApp</button>
+  <button class="nb active" onclick="showPage('home',this)"><div class="ni">🏠</div>Home</button>
+  <button class="nb" onclick="showPage('jogos',this)"><div class="ni">⚽</div>Jogos</button>
+  <button class="nb" onclick="showPage('elenco',this)"><div class="ni">👥</div>Elenco</button>
+  <button class="nb" onclick="showPage('artilharia',this)"><div class="ni">🎯</div>Artilharia</button>
+  <button class="nb" onclick="showPage('whatsapp',this)"><div class="ni">📲</div>WhatsApp</button>
 </nav>
 
 <!-- MODALS -->
@@ -640,7 +602,7 @@ document.getElementById('adminModalBg').addEventListener('click',e=>{if(e.target
 document.getElementById('adminPassInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkAdminPass();});
 
 // ===== CACHE =====
-let cache={games:[],players:[],confirmed:[],absent:[],teamPhotos:TEAM_PHOTOS,confrats:[]};
+let cache={games:[],players:[],confirmed:[],absent:[],teamPhotos:TEAM_PHOTOS,confrats:[],guests:[]};
 
 function saveLocal(){localStorage.setItem('ifc_cache',JSON.stringify({games:cache.games,players:cache.players,confirmed:cache.confirmed,absent:cache.absent}));}
 function loadLocal(){const d=localStorage.getItem('ifc_cache');if(d){const p=JSON.parse(d);cache.games=p.games||[];cache.players=p.players||[];cache.confirmed=p.confirmed||[];cache.absent=p.absent||[];}}
@@ -678,7 +640,7 @@ function daysUntil(date){
 }
 
 // ===== RENDER ALL =====
-function renderAll(){renderHome();renderGames();renderPlayers();renderScorers();renderTeamStats();renderTeamPhotos();renderRankingNotas();renderConfratList();}
+function renderAll(){renderHome();renderGames();renderPlayers();renderScorers();renderTeamStats();renderTeamPhotos();renderRankingNotas();renderConfratList();if(typeof renderBestPlayer==='function')renderBestPlayer();if(typeof renderCampos==='function')renderCampos();}
 
 // ===== HOME =====
 function renderHome(){
@@ -692,33 +654,29 @@ function renderHome(){
     <div class="sm"><div class="n">${gf}</div><div class="l">Gols</div></div>`;
 
   // Next or live game
-  var upcoming=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-  var ns=document.getElementById('nextGameSection');
+  const upcoming=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const ns=document.getElementById('nextGameSection');
   if(upcoming.length>0){
     var n=upcoming[0];
     window._nextGameId=n.id;
-    var liveStatus=getGameStatus(n);
-    var isLive=liveStatus==='live';
+    var isLive=getGameStatus(n)==='live';
     var du=daysUntil(n.date);
-    var ngBadge=isLive?'<div class="ng-live-badge">🔴 AO VIVO</div>':('<div class="ng-countdown" style="color:'+(du?du.color:'var(--tm)')+'">'+( du?du.txt:'')+'</div>');
-    var ngScore=isLive&&n.liveUs!=null?('<div class="ng-score">'+(n.liveUs||0)+'<span>x</span>'+(n.liveThem||0)+'</div>'):'<div class="vs">VS</div>';
-    var mapsQng=n.address||n.location||'';
-    var ngLoc=n.location?('<div class="ng-det">📍 '+n.location+'</div>'):'';
-    var ngTime=n.time?('<div class="ng-det">🕐 '+n.time+'</div>'):'';
-    var ngDate=n.date?('<div class="ng-det">📅 '+fmtDate(n.date)+'</div>'):'';
-    var confCnt=cache.confirmed.length;
-    var ngConf=confCnt>0?('<div class="ng-conf"><span class="ng-conf-count">✅ '+confCnt+'</span> confirmado'+(confCnt!==1?'s':'')+'</div>'):'';
-    ns.innerHTML='<div class="ngc '+(isLive?'live':'')+'" style="position:relative;overflow:hidden">'
-      +'<button onclick="openGameDetail(window._nextGameId)" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;background:transparent;z-index:10;-webkit-appearance:none"></button>'
-      +'<div class="ng-top"><div class="ng-lbl">⚡ '+(isLive?'JOGO AO VIVO':'PRÓXIMO JOGO')+'</div>'+ngBadge+'</div>'
-      +'<div class="ng-teams"><div class="ng-team">Invictos FC</div>'+ngScore+'<div class="ng-team" style="text-align:right">'+n.opponent+'</div></div>'
-      +'<div class="ng-info">'+ngDate+ngTime+ngLoc+'</div>'
-      +ngConf
+    var badge=isLive?'<div class="ng-live-badge">🔴 AO VIVO</div>':('<div class="ng-countdown" style="color:'+(du?du.color:'var(--tm)')+'">'+( du?du.txt:'')+'</div>');
+    var score=isLive&&n.liveUs!=null?('<div class="ng-score">'+(n.liveUs||0)+'<span>x</span>'+(n.liveThem||0)+'</div>'):'<div class="vs">VS</div>';
+    var loc=n.location?('<div class="ng-det">📍 '+n.location+'</div>'):'';
+    var conf=cache.confirmed.length>0?('<div class="ng-conf"><span class="ng-conf-count">✅ '+cache.confirmed.length+'</span> confirmado'+(cache.confirmed.length!==1?'s':'')+'</div>'):'';
+    ns.innerHTML=
+      '<button onclick="openGameDetail(window._nextGameId)" style="display:block;width:100%;text-align:left;background:none;border:none;padding:0;cursor:pointer">'
+      +'<div class="ngc '+(isLive?'live':'')+'">'
+      +'<div class="ng-top"><div class="ng-lbl">⚡ '+(isLive?'JOGO AO VIVO':'PRÓXIMO JOGO')+'</div>'+badge+'</div>'
+      +'<div class="ng-teams"><div class="ng-team">Invictos FC</div>'+score+'<div class="ng-team" style="text-align:right">'+n.opponent+'</div></div>'
+      +'<div class="ng-info">'+(n.date?'<div class="ng-det">📅 '+fmtDate(n.date)+'</div>':'')+(n.time?'<div class="ng-det">🕐 '+n.time+'</div>':'')+loc+'</div>'
+      +conf
       +(isLive?'<div style="font-size:.65rem;color:#4ADE80;text-align:center;margin-top:4px">🔒 Lista encerrada</div>':'')
       +'<div style="font-size:.6rem;color:var(--g);text-align:center;margin-top:5px;letter-spacing:1px">👆 Toque para detalhes e placar</div>'
-      +'</div>';
+      +'</div></button>';
   }else{
-    ns.innerHTML='<div class="ngc" style="text-align:center;padding:14px"><div style="font-size:1.3rem;margin-bottom:5px">✅</div><div style="font-family:Cinzel,serif;font-size:.82rem;color:var(--g)">Nenhum jogo agendado</div></div>';
+    ns.innerHTML='<div class="ngc" style="text-align:center;padding:14px"><div style="font-size:1.3rem">✅</div><div style="font-family:Cinzel,serif;font-size:.82rem;color:var(--g)">Nenhum jogo agendado</div></div>';
   }
 
   const recent=cache.games.filter(g=>g.status!=='agendado').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3);
@@ -788,26 +746,43 @@ window.openGameDetail=function(id){
     waAfter=`<button class="btn-wa" style="margin-top:10px" onclick="sendPostGameWA('${id}')">📲 Enviar pedido de notas ao grupo</button>`;
   }
 
-  document.getElementById('gameDetailContent').innerHTML=`
-    <div class="mt2" style="margin-bottom:8px">⚽ ${g.opponent} · ${fmtDate(g.date)}</div>
-    ${g.location?`<div style="font-size:.72rem;color:var(--tm);margin-bottom:10px">📍 ${g.location}</div>`:''}
-    ${scoreHTML}
-    ${g.scorers?`<div class="ginf" style="margin-top:8px">⚽ <span>Gols:</span> ${g.scorers}</div>`:''}
-    ${g.assists?`<div class="ginf">🎯 <span>Ass.:</span> ${g.assists}</div>`:''}
-    ${confPlayers.length>0?`
-      <div style="margin-top:12px">
-        <div class="fl" style="margin-bottom:6px">✅ CONFIRMADOS (${confPlayers.length})</div>
-        <div style="display:flex;flex-wrap:wrap">${confPlayers.map(p=>`<div class="conf-chip">${p.photo?`<img src="${p.photo}" style="width:18px;height:18px;border-radius:50%;object-fit:cover">`:`<span style="font-size:.75rem">${p.emoji||'⚽'}</span>`}${p.nick||p.name.split(' ')[0]}</div>`).join('')}</div>
-      </div>`:'' }
-    ${absentPlayers.length>0?`
-      <div style="margin-top:8px">
-        <div class="fl" style="margin-bottom:6px">❌ AUSENTES (${absentPlayers.length})</div>
-        <div style="display:flex;flex-wrap:wrap">${absentPlayers.map(p=>`<div class="abs-chip">${p.nick||p.name.split(' ')[0]}</div>`).join('')}</div>
-      </div>`:'' }
-    ${waAfter}
-  `;
+  // Guests
+  var ggs=cache.guests.filter(function(gu){return gu.gameId===gid;});
+  var gHTML='<div style="margin-top:14px"><div style="font-family:Cinzel,serif;font-size:.8rem;color:var(--gb);letter-spacing:2px;margin-bottom:8px">CONVIDADOS ('+ggs.length+')</div>';
+  ggs.forEach(function(gu){gHTML+='<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:8px;margin-bottom:5px"><span>👤</span><div style="flex:1"><div style="font-size:.88rem;font-weight:600">'+gu.name+'</div>'+(gu.note?'<div style="font-size:.65rem;color:var(--tm)">'+gu.note+'</div>':'')+'</div><button data-gid="'+gu.id+'" onclick="removeGuest(this.dataset.gid)" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:50%;width:22px;height:22px;color:#F87171;cursor:pointer;font-size:.7rem">X</button></div>';});
+  gHTML+='<div style="display:flex;gap:6px;margin-top:7px"><input id="guestNameInput" class="fi" placeholder="Nome do convidado..." style="flex:1;padding:9px"><input id="guestNoteInput" class="fi" placeholder="Ex: amigo do Nairon" style="flex:1;padding:9px"></div>';
+  gHTML+='<button class="btn-sub" style="margin-top:6px" onclick="addGuest(window._currentGameId)">+ ADICIONAR CONVIDADO</button></div>';
+
+  // Location section
+  var mapsQ=g.address||g.location||'';
+  var campoOpts='<option value="">-- Selecionar campo --</option>'+(_campos||[]).map(function(c){return'<option value="'+c.id+'"'+(c.name===g.location?' selected':'')+'>'+c.name+'</option>';}).join('');
+  var locHTML='<div style="background:var(--s2);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:12px;margin-bottom:12px">'
+    +'<div style="font-size:.62rem;color:var(--g);letter-spacing:3px;font-family:Cinzel,serif;margin-bottom:10px">📍 LOCAL DO JOGO</div>';
+  if(isAdmin){
+    locHTML+='<select class="fsel" id="gd-campo-select" onchange="selCampoGd(this.value)" style="margin-bottom:5px">'+campoOpts+'</select>';
+    locHTML+='<input class="fi" id="gd-location" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px">';
+    locHTML+='<input class="fi" id="gd-address" value="'+(g.address||'')+'" placeholder="Endereco completo...">';
+    locHTML+='<button onclick="saveLocation(window._currentGameId)" style="width:100%;margin-top:8px;padding:11px;background:linear-gradient(135deg,var(--cr),var(--crd));border:1px solid var(--gd);border-radius:8px;color:var(--gb);font-family:Cinzel,serif;font-size:.82rem;font-weight:700;cursor:pointer;letter-spacing:2px">💾 SALVAR ENDEREÇO</button>';
+  } else {
+    locHTML+=(g.location?('<div style="font-size:.92rem;font-weight:700;color:var(--t);margin-bottom:3px">'+g.location+'</div>'):'<div style="font-size:.8rem;color:var(--tm);font-style:italic">Local nao definido</div>');
+    locHTML+=(g.address?('<div style="font-size:.72rem;color:var(--tm);margin-bottom:6px">'+g.address+'</div>'):'');
+  }
+  if(mapsQ)locHTML+='<button data-q="'+encodeURIComponent(mapsQ)+'" onclick="openMapsQ(this)" style="width:100%;margin-top:6px;padding:9px;background:none;border:1px solid #4285F4;border-radius:8px;color:#4285F4;cursor:pointer;font-size:.82rem">📍 Abrir no Google Maps</button>';
+  locHTML+='</div>';
+
+  document.getElementById('gameDetailContent').innerHTML=
+    '<div class="mt2" style="margin-bottom:8px">'+g.opponent+' - '+fmtDate(g.date)+'</div>'
+    +locHTML+scoreHTML+scHTML+asHTML+confHTML+absHTML+waBtn+gHTML;
   openModal('gameDetail');
 };
+
+window.selCampoGd=function(id){
+  var c=(_campos||[]).find(function(x){return x.id===id;});if(!c)return;
+  var l=document.getElementById('gd-location');if(l)l.value=c.name;
+  var a=document.getElementById('gd-address');if(a)a.value=c.address||'';
+};
+window.openMapsQ=function(btn){window.open('https://www.google.com/maps/search/?api=1&query='+btn.dataset.q,'_blank');};
+
 
 window.adjScore=async function(id,side,delta){
   const g=cache.games.find(x=>x.id===id);if(!g)return;
@@ -1143,39 +1118,9 @@ window.compartilharLista=function(){
   var nl='\n';
   var msg='LISTA DO JOGO - INVICTOS FC'+nl;
   if(dt)msg+=fmtDateWA(dt);if(tm)msg+=' as '+tm+'h';if(dt||tm)msg+=nl;if(lc)msg+=lc+nl;
-  msg+=nl+'GOLEIROS ('+gols.length+'):'+nl;
-  gols.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
-  msg+=nl+'JOGADORES ('+out.length+'):'+nl;
-  out.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
+  msg+=nl+'GOLEIROS ('+gols.length+'):'+nl;gols.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
+  msg+=nl+'JOGADORES ('+out.length+'):'+nl;out.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
   msg+=nl+'Total: '+conf.length+' confirmado'+(conf.length!==1?'s':'');
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-}
-window.convocarWA=function(){
-  var op=document.getElementById('wa-opponent').value.trim();
-  if(!op){showToast('Informe o adversario!');return;}
-  var dt=document.getElementById('wa-date').value;
-  var tm=document.getElementById('wa-time').value;
-  var lc=document.getElementById('wa-location').value.trim();
-  var ex=document.getElementById('wa-extra').value.trim();
-  var valor=document.getElementById('wa-valor').value.trim()||'25';
-  var addrEl=document.getElementById('wa-address');
-  var addr=addrEl?addrEl.value.trim():'';
-  var confirmed=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
-  var nl='\n';
-  var lista='';
-  for(var i=1;i<=17;i++){var p=confirmed[i-1];lista+=(i)+'. '+(p?(p.nick||p.name)+' OK':'')+nl;}
-  var msg='INVICTOS FC - CONVOCACAO'+nl+nl;
-  msg+='Invictos FC vs '+op+nl;
-  if(dt)msg+=fmtDateWA(dt);
-  if(tm)msg+=' as '+tm+'h';
-  if(dt||tm)msg+=nl;
-  if(lc)msg+=lc+nl;
-  if(addr)msg+='Maps: https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(addr)+nl;
-  msg+='Valor: R$ '+valor+',00'+nl+'Nao esqueca o uniforme!'+nl+nl;
-  msg+='LISTA DO JOGO:'+nl+lista;
-  msg+=nl+'Coloque seu nome ao lado do numero!'+nl;
-  msg+=nl+'App: https://andersonveloso0503-cmyk.github.io/-invictos-fc'+nl;
-  if(ex)msg+=nl+ex+nl;
-  msg+=nl+'Invictos FC - Nunca Rendidos!';
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-}>
+};
+>
