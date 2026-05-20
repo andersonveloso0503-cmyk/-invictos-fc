@@ -787,8 +787,25 @@ window.openGameDetail=function(gid){
       +'</div>';
   }
   var mapsQ=g.address||g.location||'';
-  var mapsLink=mapsQ?(' <a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(mapsQ)+'" target="_blank" style="color:#4285F4;font-size:.65rem;">Ver no Maps</a>'):'';
-  var locHTML=g.location?'<div style="font-size:.72rem;color:var(--tm);margin-bottom:10px">📍 '+g.location+mapsLink+'</div>':'';
+  var mapsLink=mapsQ?(' <a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(mapsQ)+'" target="_blank" style="color:#4285F4;font-size:.65rem;">🗺️ Ver no Maps</a>'):'';
+  
+  // Build campo options
+  var campoOpts='<option value="">-- Selecionar campo --</option>'
+    +(_campos||[]).map(function(c){return'<option value="'+c.id+'"'+(c.name===g.location?' selected':'')+'>'+c.name+'</option>';}).join('');
+  
+  var locHTML='<div style="margin-bottom:12px;padding:10px;background:var(--s2);border:1px solid var(--br);border-radius:8px">'
+    +'<div style="font-size:.65rem;color:var(--tm);letter-spacing:2px;margin-bottom:8px">📍 ENDEREÇO DO CAMPO</div>'
+    +'<div style="margin-bottom:6px">'
+      +'<select class="fsel" id="gd-campo-select" onchange="selectCampo_gd(this.value)" style="margin-bottom:5px">'
+        +campoOpts
+      +'</select>'
+      +'<input class="fi" id="gd-location" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px">'
+      +'<div style="display:flex;gap:6px">'
+        +'<input class="fi" id="gd-address" value="'+(g.address||'')+'" placeholder="Endereco completo..." style="flex:1">'
+        +(mapsQ?'<button data-url="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(mapsQ)+'" onclick="openMapsFromData(this)" style="background:none;border:1px solid #4285F4;border-radius:7px;padding:0 10px;color:#4285F4;cursor:pointer;flex-shrink:0">📍</button>':'')
+      +'</div>'
+    +'</div>'
+    +'</div>';
   var scHTML=g.scorers?'<div class="ginf" style="margin-top:8px">Gols: <span>'+g.scorers+'</span></div>':'';
   var asHTML=g.assists?'<div class="ginf">Ass.: <span>'+g.assists+'</span></div>':'';
   var confHTML='';
@@ -1818,6 +1835,27 @@ window.removeGuest=async function(gid){
 window.adjScoreUs=function(d){adjScore(window._currentGameId,'us',d);};
 window.adjScoreThem=function(d){adjScore(window._currentGameId,'them',d);};
 // ===== GOOGLE MAPS =====
+window.openMapsFromData=function(btn){
+  var encoded=btn.dataset.mapurl||btn.dataset.url||'';
+  if(!encoded)return;
+  try{
+    var url='https://www.google.com/maps/search/?api=1&query='+encoded;
+    window.open(url,'_blank');
+  }catch(e){}
+};
+
+window.selectCampo_gd=function(id){
+  var campo=(_campos||[]).find(function(c){return c.id===id;});
+  if(!campo)return;
+  var locEl=document.getElementById('gd-location');
+  var addrEl=document.getElementById('gd-address');
+  if(locEl)locEl.value=campo.name;
+  if(addrEl)addrEl.value=campo.address||'';
+  // Update maps button
+  var mapsQ=campo.address||campo.name;
+  // refresh the button
+};
+
 window.openMaps_addr=function(btn){
   var addr=btn.dataset.addr;
   if(addr)window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(addr),'_blank');
@@ -2022,6 +2060,11 @@ function renderPlayerSelectList(){
 
 // ===== FIX GERAR CONVOCACAO GRUPO =====
 window.gerarConvocacaoGrupo=function(){
+  // Ensure _selectedPlayers is defined
+  if(typeof _selectedPlayers === 'undefined'){
+    showToast('Selecione jogadores primeiro!');
+    return;
+  }
   var selected=cache.players.filter(function(p){return _selectedPlayers[p.id];});
   if(selected.length===0){showToast('Selecione ao menos um jogador!');return;}
   var today=todayStr();
