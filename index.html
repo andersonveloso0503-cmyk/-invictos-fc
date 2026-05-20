@@ -333,7 +333,13 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       <div class="fg"><label class="fl">Data</label><input class="fi" id="wa-date" type="date"></div>
       <div class="fg"><label class="fl">Horário</label><input class="fi" id="wa-time" type="time"></div>
     </div>
-    <div class="fg"><label class="fl">Local</label><input class="fi" id="wa-location" placeholder="Ex: Campo do Parque"></div>
+    <div class="fg"><label class="fl">Local / Campo</label><input class="fi" id="wa-location" placeholder="Ex: Campo do Parque" oninput="updateMapsLink('wa')"></div>
+    <div class="fg"><label class="fl">Endereco (Google Maps)</label>
+      <div style="display:flex;gap:6px">
+        <input class="fi" id="wa-address" placeholder="Ex: Av. Ipiranga 1200, Porto Alegre" style="flex:1" oninput="updateMapsLink('wa')">
+        <button id="wa-maps-btn" onclick="openMaps('wa')" style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:0 10px;color:#4285F4;cursor:pointer;font-size:1.1rem;flex-shrink:0" title="Abrir no Google Maps">📍</button>
+      </div>
+    </div>
     <div class="frow">
       <div class="fg"><label class="fl">💰 Valor R$</label><input class="fi" id="wa-valor" type="number" min="0" step="5" placeholder="25"></div>
       <div class="fg"><label class="fl">Obs</label><input class="fi" id="wa-extra" placeholder="Ex: Colete azul"></div>
@@ -400,7 +406,13 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       <div class="fg"><label class="fl">Data</label><input class="fi" id="g-date" type="date"></div>
       <div class="fg"><label class="fl">Horário</label><input class="fi" id="g-time" type="time"></div>
     </div>
-    <div class="fg"><label class="fl">Local</label><input class="fi" id="g-location" placeholder="Nome do campo"></div>
+    <div class="fg"><label class="fl">Local / Campo</label><input class="fi" id="g-location" placeholder="Nome do campo" oninput="updateMapsLink('g')"></div>
+    <div class="fg"><label class="fl">Endereco (Google Maps)</label>
+      <div style="display:flex;gap:6px">
+        <input class="fi" id="g-address" placeholder="Ex: Av. Ipiranga 1200, Porto Alegre" style="flex:1" oninput="updateMapsLink('g')">
+        <button id="g-maps-btn" onclick="openMaps('g')" style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:0 10px;color:#4285F4;cursor:pointer;font-size:1.1rem;flex-shrink:0" title="Abrir no Google Maps">📍</button>
+      </div>
+    </div>
     <div class="fg"><label class="fl">Status</label>
       <select class="fsel" id="g-status" onchange="toggleSF()">
         <option value="agendado">Agendado</option>
@@ -748,7 +760,9 @@ window.openGameDetail=function(gid){
       +'<span class="gs '+sl[1]+'" style="padding:4px 12px">'+sl[0]+'</span>'
       +'</div>';
   }
-  var locHTML=g.location?'<div style="font-size:.72rem;color:var(--tm);margin-bottom:10px">Local: '+g.location+'</div>':'';
+  var mapsQ=g.address||g.location||'';
+  var mapsLink=mapsQ?(' <a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(mapsQ)+'" target="_blank" style="color:#4285F4;font-size:.65rem;">Ver no Maps</a>'):'';
+  var locHTML=g.location?'<div style="font-size:.72rem;color:var(--tm);margin-bottom:10px">📍 '+g.location+mapsLink+'</div>':'';
   var scHTML=g.scorers?'<div class="ginf" style="margin-top:8px">Gols: <span>'+g.scorers+'</span></div>':'';
   var asHTML=g.assists?'<div class="ginf">Ass.: <span>'+g.assists+'</span></div>':'';
   var confHTML='';
@@ -929,9 +943,10 @@ window.saveGame=async function(){
   try{
     const id='g'+Date.now();
     const notas=collectNotas();
-    await setDoc(doc(db,'games',id),{id,opponent:opp,date:document.getElementById('g-date').value,time:document.getElementById('g-time').value,location:document.getElementById('g-location').value,status:document.getElementById('g-status').value,goalsUs:parseInt(document.getElementById('g-goals-us').value)||0,goalsThem:parseInt(document.getElementById('g-goals-them').value)||0,scorers:document.getElementById('g-scorers').value,assists:document.getElementById('g-assists').value,notes:document.getElementById('g-notes').value,notas});
+    var addrEl=document.getElementById('g-address');
+    await setDoc(doc(db,'games',id),{id,opponent:opp,date:document.getElementById('g-date').value,time:document.getElementById('g-time').value,location:document.getElementById('g-location').value,address:addrEl?addrEl.value:'',status:document.getElementById('g-status').value,goalsUs:parseInt(document.getElementById('g-goals-us').value)||0,goalsThem:parseInt(document.getElementById('g-goals-them').value)||0,scorers:document.getElementById('g-scorers').value,assists:document.getElementById('g-assists').value,notes:document.getElementById('g-notes').value,notas});
     closeModal('addGame');showToast('Jogo salvo! ⚽');
-    ['g-opponent','g-location','g-time','g-scorers','g-assists','g-notes'].forEach(i=>document.getElementById(i).value='');
+    ['g-opponent','g-location','g-address','g-time','g-scorers','g-assists','g-notes'].forEach(function(i){var el=document.getElementById(i);if(el)el.value='';});
     document.getElementById('g-goals-us').value=0;document.getElementById('g-goals-them').value=0;
   }catch(e){showToast('Erro ao salvar!');}
   showSync(false);
@@ -1775,6 +1790,23 @@ window.removeGuest=async function(gid){
 
 window.adjScoreUs=function(d){adjScore(window._currentGameId,'us',d);};
 window.adjScoreThem=function(d){adjScore(window._currentGameId,'them',d);};
+// ===== GOOGLE MAPS =====
+window.openMaps=function(prefix){
+  var addr=document.getElementById(prefix+'-address');
+  var loc=document.getElementById(prefix+'-location');
+  var query=(addr&&addr.value.trim())||(loc&&loc.value.trim())||'';
+  if(!query){showToast('Informe o endereco ou local!');return;}
+  window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(query),'_blank');
+};
+
+window.updateMapsLink=function(prefix){
+  var addr=document.getElementById(prefix+'-address');
+  var loc=document.getElementById(prefix+'-location');
+  var btn=document.getElementById(prefix+'-maps-btn');
+  var hasVal=(addr&&addr.value.trim())||(loc&&loc.value.trim());
+  if(btn)btn.style.color=hasVal?'#4285F4':'var(--tm)';
+};
+
 // ===== BTN WRAPPERS (avoid inline ID passing) =====
 window.adjScoreBtn=function(el){adjScore(el.dataset.id,el.dataset.side,parseInt(el.dataset.delta));};
 window.saveGameDetailBtn=function(el){saveGameDetail(el.dataset.id);};
@@ -1817,6 +1849,94 @@ async function init(){
   // Refresh live status every 30s
   setInterval(()=>renderHome(),30000);
 }
+
+// ===== GOOGLE MAPS =====
+window.openMaps=function(prefix){
+  var addr=document.getElementById(prefix+'-address');
+  var loc=document.getElementById(prefix+'-location');
+  var query=(addr&&addr.value.trim())||(loc&&loc.value.trim())||'';
+  if(!query){showToast('Informe o endereco ou local!');return;}
+  window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(query),'_blank');
+};
+
+window.updateMapsLink=function(prefix){
+  var addr=document.getElementById(prefix+'-address');
+  var loc=document.getElementById(prefix+'-location');
+  var btn=document.getElementById(prefix+'-maps-btn');
+  var hasVal=(addr&&addr.value.trim())||(loc&&loc.value.trim());
+  if(btn)btn.style.color=hasVal?'#4285F4':'var(--tm)';
+};
+
+// ===== FIX GERAR CONVOCACAO GRUPO =====
+window.gerarConvocacaoGrupo=function(){
+  var selected=cache.players.filter(function(p){return _selectedPlayers[p.id];});
+  if(selected.length===0){showToast('Selecione ao menos um jogador!');return;}
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var dtEl=document.getElementById('wa-date');
+  var tmEl=document.getElementById('wa-time');
+  var lcEl=document.getElementById('wa-location');
+  var opEl=document.getElementById('wa-opponent');
+  var valEl=document.getElementById('wa-valor');
+  var addrEl=document.getElementById('wa-address');
+  var dt=(dtEl&&dtEl.value)||(nextGame?nextGame.date:'');
+  var tm=(tmEl&&tmEl.value)||(nextGame?nextGame.time:'');
+  var lc=(lcEl&&lcEl.value.trim())||(nextGame?nextGame.location:'');
+  var op=(opEl&&opEl.value.trim())||(nextGame?nextGame.opponent:'');
+  var valor=(valEl&&valEl.value.trim())||'25';
+  var addr=addrEl?addrEl.value.trim():'';
+  var appUrl='https://andersonveloso0503-cmyk.github.io/-invictos-fc';
+  var nl='\n';
+  if(!op){showToast('Preencha o adversario!');return;}
+  var msg='INVICTOS FC - CONVOCACAO'+nl+nl;
+  msg+='Invictos FC vs '+op+nl;
+  if(dt)msg+=fmtDateWA(dt);
+  if(tm)msg+=' as '+tm+'h';
+  if(dt||tm)msg+=nl;
+  if(lc)msg+=lc+nl;
+  if(addr)msg+='Maps: https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(addr)+nl;
+  msg+='Valor: R$ '+valor+',00 - Nao esqueca o uniforme!'+nl+nl;
+  msg+='CONFIRME SUA PRESENCA:'+nl+nl;
+  selected.forEach(function(p){
+    var name=p.nick||p.name.split(' ')[0];
+    msg+=name+':'+nl;
+    msg+='SIM: '+appUrl+'?confirm='+p.id+nl;
+    msg+='NAO: '+appUrl+'?absent='+p.id+nl+nl;
+  });
+  msg+='Invictos FC - Nunca Rendidos!';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+};
+
+// ===== GUESTS =====
+window.addGuest=async function(gameId){
+  var nameEl=document.getElementById('guestNameInput');
+  var noteEl=document.getElementById('guestNoteInput');
+  var name=nameEl?nameEl.value.trim():'';
+  var note=noteEl?noteEl.value.trim():'';
+  if(!name){showToast('Informe o nome!');return;}
+  showSync(true);
+  try{
+    var id='gu'+Date.now();
+    await setDoc(doc(db,'guests',id),{id:id,gameId:gameId,name:name,note:note,createdAt:Date.now()});
+    if(nameEl)nameEl.value='';
+    if(noteEl)noteEl.value='';
+    showToast('Convidado adicionado!');
+    openGameDetail(gameId);
+  }catch(e){showToast('Erro!');}
+  showSync(false);
+};
+
+window.removeGuest=async function(gid){
+  if(!confirm('Remover convidado?'))return;
+  showSync(true);
+  try{
+    await deleteDoc(doc(db,'guests',gid));
+    showToast('Removido!');
+    openGameDetail(window._currentGameId);
+  }catch(e){showToast('Erro!');}
+  showSync(false);
+};
+
 
 init();
 </script>
