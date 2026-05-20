@@ -257,7 +257,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div class="hero-motto">NUNCA RENDIDOS · SEMPRE GUERREIROS</div>
   </div>
   <div class="srow" id="homeStats"></div>
-  <div id="nextGameSection"></div>
+  <div id="nextGameSection" onclick="onNextGameClick(event)" style="cursor:pointer"></div>
   <div id="bestPlayerSection"></div>
   <div class="sh"><h2>ÚLTIMOS JOGOS</h2><div class="sl"></div></div>
   <div id="recentGames"></div>
@@ -705,23 +705,34 @@ function renderHome(){
     const du=daysUntil(n.date);
     const confCount=cache.confirmed.length;
     const confNames=cache.players.filter(p=>cache.confirmed.includes(p.id)).slice(0,3).map(p=>p.nick||p.name.split(' ')[0]).join(', ');
-    var ngClass=isLive?'live':'';
-    var ngBadge=isLive?'<div class="ng-live-badge">🔴 AO VIVO</div>':('<div class="ng-countdown" style="color:'+(du?du.color:'var(--tm)')+'">'+( du?du.txt:'')+'</div>');
-    var ngScore=isLive&&n.liveUs!=null?('<div class="ng-score">'+(n.liveUs||0)+'<span>x</span>'+(n.liveThem||0)+'</div>'):'<div class="vs">VS</div>';
-    var mapsQng=n.address||n.location||'';
-    var ngLoc=n.location?('<div class="ng-det">📍 '+n.location+(mapsQng?' <span style="color:#4285F4;font-size:.6rem;cursor:pointer" data-mapurl="'+encodeURIComponent(mapsQng)+'" onclick="event.stopPropagation();openMapsFromData(this)">🗺️</span>':'')+'</div>'):'';
-    var ngTime=n.time?('<div class="ng-det">🕐 '+n.time+'</div>'):'';
-    var ngDate=n.date?('<div class="ng-det">📅 '+fmtDate(n.date)+'</div>'):'';
-    var ngConf=cache.confirmed.length>0?('<div class="ng-conf"><span class="ng-conf-count">✅ '+cache.confirmed.length+'</span> confirmado'+(cache.confirmed.length!==1?'s':'')+'</div>'):'';
-    var ngLiveMsg=isLive?'<div style="font-size:.65rem;color:#4ADE80;text-align:center;margin-top:4px">🔒 Lista encerrada durante o jogo</div>':'';
-    var ngTap='<div style="font-size:.6rem;color:var(--g);text-align:center;margin-top:5px;letter-spacing:1px">👆 Toque para detalhes e placar</div>';
-    window._nextGameId=n.id;
-    ns.innerHTML='<div class="ngc '+ngClass+'" id="nextGameCard" data-gid="'+n.id+'">'
-      +'<div class="ng-top"><div class="ng-lbl">⚡ '+(isLive?'JOGO AO VIVO':'PRÓXIMO JOGO')+'</div>'+ngBadge+'</div>'
-      +'<div class="ng-teams"><div class="ng-team">Invictos FC</div>'+ngScore+'<div class="ng-team" style="text-align:right">'+n.opponent+'</div></div>'
-      +'<div class="ng-info">'+ngDate+ngTime+ngLoc+'</div>'
-      +ngConf+ngTap+ngLiveMsg
-      +'</div>';
+    window._nextGameId = n.id;
+    var ngClass = isLive ? 'live' : '';
+    var ngBadge = isLive
+      ? '<div class="ng-live-badge">🔴 AO VIVO</div>'
+      : '<div class="ng-countdown" style="color:'+(du?du.color:'var(--tm)')+'">'+( du?du.txt:'')+'</div>';
+    var ngScore = isLive && n.liveUs != null
+      ? '<div class="ng-score">'+(n.liveUs||0)+'<span>x</span>'+(n.liveThem||0)+'</div>'
+      : '<div class="vs">VS</div>';
+    var mapsQng = n.address || n.location || '';
+    var ngLoc = n.location
+      ? '<div class="ng-det">📍 '+n.location+(mapsQng?' <span style="color:#4285F4;font-size:.6rem;cursor:pointer" data-mapurl="'+encodeURIComponent(mapsQng)+'" onclick="event.stopPropagation();openMapsFromData(this)">🗺️</span>':'')+'</div>'
+      : '';
+    var ngTime = n.time ? '<div class="ng-det">🕐 '+n.time+'</div>' : '';
+    var ngDate = n.date ? '<div class="ng-det">📅 '+fmtDate(n.date)+'</div>' : '';
+    var ngConf = cache.confirmed.length > 0
+      ? '<div class="ng-conf"><span class="ng-conf-count">✅ '+cache.confirmed.length+'</span> confirmado'+(cache.confirmed.length!==1?'s':'')+'</div>'
+      : '';
+    var ngLiveMsg = isLive ? '<div style="font-size:.65rem;color:#4ADE80;text-align:center;margin-top:4px">🔒 Lista encerrada</div>' : '';
+
+    ns.innerHTML = '<div class="ngc '+ngClass+'">'
+      + '<div class="ng-top"><div class="ng-lbl">⚡ '+(isLive?'JOGO AO VIVO':'PRÓXIMO JOGO')+'</div>'+ngBadge+'</div>'
+      + '<div class="ng-teams"><div class="ng-team">Invictos FC</div>'+ngScore+'<div class="ng-team" style="text-align:right">'+n.opponent+'</div></div>'
+      + '<div class="ng-info">'+ngDate+ngTime+ngLoc+'</div>'
+      + ngConf + ngLiveMsg
+      + '<div style="font-size:.6rem;color:var(--g);text-align:center;margin-top:5px;letter-spacing:1px">👆 Toque para detalhes e placar</div>'
+      + '</div>';
+
+
 
   }else{
     ns.innerHTML='<div class="ngc" style="text-align:center;padding:14px">'
@@ -1829,6 +1840,15 @@ window.saveLocation=async function(gid){
     openGameDetail(gid);
   }catch(e){showToast('Erro: '+e.message);}
   showSync(false);
+};
+
+window.onNextGameClick=function(e){
+  // Don't trigger if clicking on maps icon
+  if(e.target.dataset && e.target.dataset.mapurl) return;
+  if(e.target.closest && e.target.closest('[data-mapurl]')) return;
+  if(window._nextGameId){
+    openGameDetail(window._nextGameId);
+  }
 };
 
 window.openMapsFromData=function(btn){
