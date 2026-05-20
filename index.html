@@ -256,7 +256,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div class="hero-motto">NUNCA RENDIDOS · SEMPRE GUERREIROS</div>
   </div>
   <div class="srow" id="homeStats"></div>
-  <div id="nextGameSection"></div>
+  <button id="nextGameSection" onclick="if(window._nextGameId)openGameDetail(window._nextGameId)" style="display:block;width:100%;text-align:left;background:none;border:none;padding:0;cursor:pointer;-webkit-appearance:none;-webkit-tap-highlight-color:rgba(0,0,0,0)"></button>
   <div id="bestPlayerSection"></div>
   <div class="sh"><h2>ÚLTIMOS JOGOS</h2><div class="sl"></div></div>
   <div id="recentGames"></div>
@@ -625,7 +625,7 @@ function renderHome(){
     var isLive=getGameStatus(n)==='live';var du=daysUntil(n.date);
     var badge=isLive?'<div class="ng-live-badge">🔴 AO VIVO</div>':('<div class="ng-countdown" style="color:'+(du?du.color:'var(--tm)')+'">'+(du?du.txt:'')+'</div>');
     var score=isLive&&n.liveUs!=null?('<div class="ng-score">'+(n.liveUs||0)+'<span>x</span>'+(n.liveThem||0)+'</div>'):'<div class="vs">VS</div>';
-    var c2=cache.confirmed.length>0?('<div class="ng-conf"><span class="ng-conf-count">'+cache.confirmed.length+'</span> confirmado'+(cache.confirmed.length!==1?'s':'')+'</div>'):'';    ns.innerHTML='<button onclick="openGameDetail(window._nextGameId)" style="display:block;width:100%;text-align:left;background:none;border:none;padding:0;cursor:pointer;-webkit-appearance:none"><div class="ngc '+(isLive?'live':'')+'"><div class="ng-top"><div class="ng-lbl">PROXIMO JOGO</div>'+badge+'</div><div class="ng-teams"><div class="ng-team">Invictos FC</div>'+score+'<div class="ng-team" style="text-align:right">'+n.opponent+'</div></div><div class="ng-info">'+(n.date?'<div class="ng-det">'+fmtDate(n.date)+'</div>':'')+(n.time?'<div class="ng-det">'+n.time+'</div>':'')+(n.location?'<div class="ng-det">'+n.location+'</div>':'')+'</div>'+c2+'<div style="font-size:.6rem;color:var(--g);text-align:center;margin-top:5px">Toque para detalhes</div></div></button>';
+    var c2=cache.confirmed.length>0?('<div class="ng-conf"><span class="ng-conf-count">'+cache.confirmed.length+'</span> confirmado'+(cache.confirmed.length!==1?'s':'')+'</div>'):'';    ns.innerHTML='<div class="ngc '+(isLive?'live':'')+'"><div class="ng-top"><div class="ng-lbl">PROXIMO JOGO</div>'+badge+'</div><div class="ng-teams"><div class="ng-team">Invictos FC</div>'+score+'<div class="ng-team" style="text-align:right">'+n.opponent+'</div></div><div class="ng-info">'+(n.date?'<div class="ng-det">'+fmtDate(n.date)+'</div>':'')+(n.time?'<div class="ng-det">'+n.time+'</div>':'')+(n.location?'<div class="ng-det">'+n.location+'</div>':'')+'</div>'+c2+'<div style="font-size:.6rem;color:var(--g);text-align:center;margin-top:5px">Toque para detalhes</div></div></button>';
   }else{
     ns.innerHTML='<div class="ngc" style="text-align:center;padding:14px">Nenhum jogo agendado</div>';
   }
