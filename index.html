@@ -526,7 +526,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 <div class="sync-ov" id="syncOverlay"><div class="sync-spin"></div><div class="sync-txt">SINCRONIZANDO...</div></div>
 <div class="toast" id="toast"></div>
 
-<script type="module">var confHtml=totalConf>0?'<div class="ng-conf"><span class="ng-conf-count">'+totalConf+'</span> confirmado'+(totalConf!==1?'s':'')+(guestCount>0?' <span style="font-size:.6rem;color:#E040FB">(+'+guestCount+' conv.)</span>':'')+'</div>':'';
+<script type="module">    var confHtml=totalConf>0?'<div class="ng-conf"><span class="ng-conf-count">'+totalConf+'</span> confirmado'+(totalConf!==1?'s':'')+(guestCount>0?' <span style="font-size:.6rem;color:#E040FB">(+'+guestCount+' conv.)</span>':'')+'</div>':'';
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -1021,8 +1021,7 @@ window.showPlayerDetail=function(id){
     var PPOS=['Goleiro','Zagueiro','Lat. Direito','Lat. Esquerdo','Volante','Atacante','Centroavante'];
     var div=document.createElement('div');
     div.style.marginBottom='12px';
-    div.innerHTML='<div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:7px">POSICAO</div>'
-      +'<div style="display:flex;flex-wrap:wrap;gap:5px" id="posChipsDetail"></div>';
+    div.innerHTML='<div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:7px">POSICAO</div><div style="display:flex;flex-wrap:wrap;gap:5px" id="posChipsDetail"></div>';
     var btns=el.querySelectorAll('.btn-can');
     if(btns.length)el.insertBefore(div,btns[0]);else el.appendChild(div);
     var grid=document.getElementById('posChipsDetail');if(!grid)return;
@@ -1757,11 +1756,17 @@ async function init(){
   renderAll();updateAdminUI();
   document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
-  setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash').remove(),800);},2200);
-  await seedGames();
+  // Hide splash quickly - don't wait for Firebase
+  setTimeout(function(){
+    var sp=document.getElementById('splash');
+    if(sp){sp.classList.add('hide');setTimeout(function(){if(sp.parentNode)sp.parentNode.removeChild(sp);},800);}
+  },1800);
+  // Start listeners first so app works immediately
   await startListeners();
+  // Seed games in background after app is ready
+  setTimeout(function(){seedGames().catch(function(){});},3000);
   // Refresh live status every 30s
-  setInterval(()=>renderHome(),30000);
+  setInterval(function(){renderHome();},30000);
 }
 
 init();</script>
