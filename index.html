@@ -61,20 +61,20 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 .ngc.live::before{content:'';position:absolute;inset:0;background:rgba(34,197,94,.05);animation:livepulse 2s ease-in-out infinite}
 @keyframes livepulse{0%,100%{opacity:0}50%{opacity:1}}
 .ng-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.ng-lbl{font-size:.58rem;color:var(--g);letter-spacing:3px;text-transform:uppercase}
+.ng-lbl{font-size:.66rem;color:var(--g);letter-spacing:3px;text-transform:uppercase}
 .ng-countdown{font-size:.7rem;font-weight:700;letter-spacing:1px}
 .ng-live-badge{background:#4ADE80;color:#000;font-size:.6rem;font-weight:900;padding:3px 8px;border-radius:20px;letter-spacing:1px;animation:badgepulse 1s ease-in-out infinite}
 @keyframes badgepulse{0%,100%{opacity:1}50%{opacity:.6}}
 .ng-teams{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.ng-team{font-family:'Cinzel',serif;font-size:.9rem;font-weight:700}
+.ng-team{font-family:'Cinzel',serif;font-size:1.05rem;font-weight:700}
 .vs{background:var(--g);color:var(--bg);font-weight:900;font-size:.65rem;padding:3px 8px;border-radius:20px}
 .ng-score{font-family:'Cinzel',serif;font-size:2rem;font-weight:900;color:var(--gb);text-align:center;min-width:80px}
 .ng-score span{color:var(--tm);font-size:1.2rem;margin:0 3px}
 .ng-info{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
-.ng-det{font-size:.7rem;color:var(--tm)}
+.ng-det{font-size:.78rem;color:var(--tm)}
 .ng-conf{display:flex;align-items:center;gap:6px;padding-top:6px;border-top:1px solid var(--br);font-size:.72rem;color:var(--tm)}
 .ng-conf-count{color:#4ADE80;font-weight:700;font-family:'Cinzel',serif}
-.ng-tap{font-size:.6rem;color:var(--g);text-align:center;margin-top:5px;letter-spacing:1px}
+.ng-tap{font-size:.68rem;color:var(--g);text-align:center;margin-top:5px;letter-spacing:1px}
 /* GAME CARDS */
 .gc{background:linear-gradient(135deg,var(--s),var(--s2));border:1px solid var(--br);border-radius:11px;padding:12px;margin-bottom:8px;position:relative;overflow:hidden}
 .gc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cr),var(--gd))}
@@ -244,6 +244,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   <div><div class="ht">INVICTOS FC</div><div class="hs">FUTEBOL AMADOR · 2015</div></div>
   <div class="hbts">
     <button class="hsync" id="syncStatus" onclick="forcSync()">● OFFLINE</button>
+    <button class="hadm" onclick="showPage('confrat',null)" style="border-color:rgba(171,71,188,.4);color:#E040FB">🎉</button>
+    <button class="hadm" onclick="showPage('notas',null)" style="color:var(--g)">⭐</button>
     <button class="hadm" id="adminBtn" onclick="openAdminModal()">🔒 ADMIN</button>
   </div>
 </header>
@@ -287,10 +289,30 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 
 <!-- ARTILHARIA -->
 <div id="page-artilharia" class="page">
-  <div class="sh"><h2>ARTILHEIROS</h2><div class="sl"></div></div>
-  <div id="scorersList"></div>
-  <div class="sh" style="margin-top:14px"><h2>ASSISTÊNCIAS</h2><div class="sl"></div></div>
-  <div id="assistsList"></div>
+  <div class="fr" style="margin-bottom:11px">
+    <button class="fb active" onclick="switchArtTab('art',this)">⚽ Artilh.</button>
+    <button class="fb" onclick="switchArtTab('ass',this)">🎯 Assist.</button>
+    <button class="fb" onclick="switchArtTab('notas',this)">⭐ Notas</button>
+    <button class="fb" onclick="switchArtTab('confrat',this)">🎉 Confrat.</button>
+  </div>
+  <div id="atab-art">
+    <div class="sh"><h2>ARTILHEIROS</h2><div class="sl"></div></div>
+    <div id="scorersList"></div>
+  </div>
+  <div id="atab-ass" style="display:none">
+    <div class="sh"><h2>ASSISTÊNCIAS</h2><div class="sl"></div></div>
+    <div id="assistsList"></div>
+  </div>
+  <div id="atab-notas" style="display:none">
+    <div class="sh"><h2>⭐ RANKING DE NOTAS</h2><div class="sl"></div></div>
+    <div style="font-size:.7rem;color:var(--tm);margin-bottom:11px;padding:9px 11px;background:var(--s2);border-radius:7px;border:1px solid var(--br)">Notas são dadas ao registrar um jogo.</div>
+    <div id="rankingNotas"></div>
+  </div>
+  <div id="atab-confrat" style="display:none">
+    <button class="btn-add admin-only" onclick="openModal('addConfrat')">🎉 + NOVO EVENTO</button>
+    <div class="sh"><h2>🎉 CONFRATERNIZAÇÕES</h2><div class="sl"></div></div>
+    <div id="confratList"></div>
+  </div>
 </div>
 
 <!-- NOTAS -->
@@ -312,6 +334,15 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 <!-- WHATSAPP -->
 <div id="page-whatsapp" class="page">
   <div class="sh"><h2>📢 CONVOCAR JOGO</h2><div class="sl"></div></div>
+  <div class="card" style="margin-bottom:12px">
+    <div style="font-size:.65rem;color:var(--g);letter-spacing:2px;margin-bottom:8px">SELECIONAR JOGADORES</div>
+    <div id="playerSelGrid" style="max-height:220px;overflow-y:auto;margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:9px">
+      <button class="fb active" style="flex:1" onclick="selAllPlayers(true)">Todos ✅</button>
+      <button class="fb" style="flex:1" onclick="selAllPlayers(false)">Limpar</button>
+    </div>
+    <button class="btn-wa" onclick="convocarGrupo()"><span>📲</span> CONVOCAR SELECIONADOS</button>
+  </div>
   <div class="card" style="margin-bottom:12px">
     <div class="fg"><label class="fl">Adversário</label><input class="fi" id="wa-opponent" placeholder="Ex: Grêmio do Bairro"></div>
     <div class="frow">
@@ -354,8 +385,6 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   <button class="nb" onclick="showPage('jogos',this)"><div class="ni">⚽</div>Jogos</button>
   <button class="nb" onclick="showPage('elenco',this)"><div class="ni">👥</div>Elenco</button>
   <button class="nb" onclick="showPage('artilharia',this)"><div class="ni">🎯</div>Artilh.</button>
-  <button class="nb" onclick="showPage('notas',this)"><div class="ni">⭐</div>Notas</button>
-  <button class="nb" onclick="showPage('confrat',this)"><div class="ni">🎉</div>Confrat.</button>
   <button class="nb" onclick="showPage('whatsapp',this)"><div class="ni">📲</div>WhatsApp</button>
 </nav>
 
@@ -592,7 +621,7 @@ function daysUntil(date){
 }
 
 // ===== RENDER ALL =====
-function renderAll(){renderHome();renderGames();renderPlayers();renderScorers();renderTeamStats();renderTeamPhotos();renderRankingNotas();renderConfratList();}
+function renderAll(){renderPlayerSelGrid();renderHome();renderGames();renderPlayers();renderScorers();renderTeamStats();renderTeamPhotos();renderRankingNotas();renderConfratList();}
 
 // ===== HOME =====
 function renderHome(){
@@ -710,7 +739,11 @@ window.openGameDetail=function(id){
 
   document.getElementById('gameDetailContent').innerHTML=`
     <div class="mt2" style="margin-bottom:8px">⚽ ${g.opponent} · ${fmtDate(g.date)}</div>
-    ${g.location?`<div style="font-size:.72rem;color:var(--tm);margin-bottom:10px">📍 ${g.location}</div>`:''}
+    <div style="background:var(--s2);border:1px solid var(--br);border-radius:9px;padding:10px;margin-bottom:10px">
+      <div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:5px">📍 LOCAL DO JOGO</div>
+      ${isAdmin?'<div><input class="fi" id="gd-loc" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px"><input class="fi" id="gd-addr" value="'+(g.address||'')+'" placeholder="Endereço (ex: Rua X 100, Viamão)"><button class="btn-sub" style="margin-top:6px;padding:8px" data-gid="'+id+'" onclick="saveGameLocation(this.dataset.gid)">💾 SALVAR</button></div>'
+      :'<div>'+(g.location?'<div style="font-weight:700">'+g.location+'</div>':'')+(g.address?'<div style="font-size:.72rem;color:var(--tm)">'+g.address+'</div><a href="https://maps.google.com/?q='+encodeURIComponent(g.address||'')+'" target="_blank" style="font-size:.7rem;color:#4285F4">🗺️ Ver no Google Maps</a>':'')+((!g.location&&!g.address)?'<div style="font-size:.72rem;color:var(--tm)">Nenhum local informado</div>':'')+'</div>'}
+    </div>
     ${scoreHTML}
     ${g.scorers?`<div class="ginf" style="margin-top:8px">⚽ <span>Gols:</span> ${g.scorers}</div>`:''}
     ${g.assists?`<div class="ginf">🎯 <span>Ass.:</span> ${g.assists}</div>`:''}
@@ -729,6 +762,19 @@ window.openGameDetail=function(id){
   openModal('gameDetail');
 };
 
+window.saveGameLocation=async function(id){
+  if(!isAdmin){showToast('🔒 Admin only');return;}
+  const loc=document.getElementById('gd-loc').value.trim();
+  const addr=document.getElementById('gd-addr').value.trim();
+  const g=cache.games.find(x=>x.id===id);if(!g)return;
+  showSync(true);
+  try{
+    await setDoc(doc(db,'games',id),{...g,location:loc,address:addr});
+    showToast('Local salvo! 📍');
+    setTimeout(()=>openGameDetail(id),400);
+  }catch(e){showToast('Erro!');}
+  showSync(false);
+};
 window.adjScore=async function(id,side,delta){
   const g=cache.games.find(x=>x.id===id);if(!g)return;
   if(side==='us')g.liveUs=Math.max(0,(g.liveUs||0)+delta);
@@ -778,19 +824,16 @@ function gameCardHTML(g,showDel=true){
   const st=getGameStatus(g);
   const[label,cls]=statusLabel(st);
   const fin=g.status!=='agendado';
-  return`<div class="gc">
-    <div class="gh"><div class="gd2">📅 ${fmtDate(g.date)}${g.time?' · '+g.time:''}</div><div class="gs ${cls}">${label}</div></div>
-    <div class="gsr">
-      <div class="gt">Invictos FC</div>
-      <div class="gsc">${fin?`${g.goalsUs}<span>×</span>${g.goalsThem}`:`<span style="font-size:.85rem">VS</span>`}</div>
-      <div class="gt r">${g.opponent}</div>
-    </div>
-    ${g.location?`<div class="ginf" style="margin-top:4px">📍 ${g.location}</div>`:''}
-    ${g.scorers?`<div class="ginf">⚽ <span>Gols:</span> ${g.scorers}</div>`:''}
-    ${g.assists?`<div class="ginf">🎯 <span>Ass.:</span> ${g.assists}</div>`:''}
-    ${g.notes?`<div class="ginf">📝 ${g.notes}</div>`:''}
-    ${showDel?`<button class="del-btn admin-only" onclick="deleteGame('${g.id}')">🗑️</button>`:''}
-  </div>`;
+  var h='<div class="gc" data-gid="'+g.id+'" onclick="openGameDetail(this.dataset.gid)" style="cursor:pointer">';
+  h+='<div class="gh"><div class="gd2">📅 '+fmtDate(g.date)+(g.time?' · '+g.time:'')+'</div><div class="gs '+cls+'">'+label+'</div></div>';
+  h+='<div class="gsr"><div class="gt">Invictos FC</div><div class="gsc">'+(fin?g.goalsUs+'<span>×</span>'+g.goalsThem:'<span style="font-size:.85rem">VS</span>')+'</div><div class="gt r">'+g.opponent+'</div></div>';
+  if(g.location)h+='<div class="ginf">📍 '+g.location+'</div>';
+  if(g.address)h+='<div class="ginf" style="color:#4285F4;font-size:.65rem">'+g.address+'</div>';
+  if(g.scorers)h+='<div class="ginf">⚽ <span>Gols:</span> '+g.scorers+'</div>';
+  if(g.assists)h+='<div class="ginf">🎯 <span>Ass.:</span> '+g.assists+'</div>';
+  if(g.notes)h+='<div class="ginf">📝 '+g.notes+'</div>';
+  if(showDel)h+='<button class="del-btn admin-only" data-gid="'+g.id+'" onclick="event.stopPropagation();deleteGame(this.dataset.gid)">🗑️</button>';
+  return h+'</div>';
 }
 
 function renderGames(filter='todos'){
@@ -1149,7 +1192,7 @@ window.showPage=function(name,btn){
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');btn.classList.add('active');
   renderAll();updateAdminUI();
-  if(name==='whatsapp'){
+  if(name==='whatsapp'){renderPlayerSelGrid();
     renderConfirmList();
     const today=todayStr();
     const next=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
@@ -1471,6 +1514,55 @@ async function seedGames(){
   }
 }
 
+window.switchArtTab=function(tab,btn){
+  ['art','ass','notas','confrat'].forEach(function(t){
+    var el=document.getElementById('atab-'+t);
+    if(el)el.style.display=(t===tab)?'block':'none';
+  });
+  document.querySelectorAll('#page-artilharia .fb').forEach(function(b){b.classList.remove('active');});
+  if(btn)btn.classList.add('active');
+  if(tab==='notas')renderRankingNotas();
+  if(tab==='confrat')renderConfratList();
+};
+// ===== PLAYER SELECTION FOR GROUP CONVOCATION =====
+var _pSel={};
+window.selAllPlayers=function(v){
+  cache.players.forEach(function(p){_pSel[p.id]=v;});
+  renderPlayerSelGrid();
+};
+function renderPlayerSelGrid(){
+  var el=document.getElementById('playerSelGrid');if(!el)return;
+  if(!cache.players.length){el.innerHTML='<div style="font-size:.72rem;color:var(--tm)">Nenhum jogador</div>';return;}
+  el.innerHTML=cache.players.map(function(p){
+    var chk=_pSel[p.id]?'checked':'';
+    var av=p.photo?'<img src="'+p.photo+'" style="width:22px;height:22px;border-radius:50%;object-fit:cover">':'<span>'+(p.emoji||'⚽')+'</span>';
+    return'<label style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid var(--br);cursor:pointer">'
+      +'<input type="checkbox" data-pid="'+p.id+'" '+chk+' onchange="window._pSel[this.dataset.pid]=this.checked" style="width:16px;height:16px;accent-color:var(--cr)">'
+      +av+'<span style="font-size:.82rem;font-weight:600;flex:1">'+(p.nick||p.name)+'</span>'
+      +'<span style="font-size:.6rem;color:var(--tm)">'+(p.pos||'')+'</span></label>';
+  }).join('');
+}
+window.convocarGrupo=function(){
+  var sel=cache.players.filter(function(p){return _pSel[p.id];});
+  if(!sel.length){showToast('Selecione ao menos 1 jogador!');return;}
+  var op=document.getElementById('wa-opponent').value.trim();
+  if(!op){showToast('Preencha o adversário primeiro!');return;}
+  var dt=document.getElementById('wa-date').value;
+  var tm=document.getElementById('wa-time').value;
+  var lc=document.getElementById('wa-location').value.trim();
+  var valor=document.getElementById('wa-valor').value.trim();
+  var nl='\n';
+  var msg='INVICTOS FC - CONVOCAÇÃO'+nl+nl;
+  msg+='⚔️ Invictos FC vs '+op+nl;
+  if(dt)msg+=fmtDateWA(dt);if(tm)msg+=' às '+tm+'h';if(dt||tm)msg+=nl;
+  if(lc)msg+='📍 '+lc+nl;
+  msg+='💰 R$ '+(valor||'25')+',00 por jogador'+nl+nl;
+  msg+='🦁 CONVOCADOS:'+nl;
+  sel.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
+  msg+=nl+'Confirme presença no app:'+nl+'🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc'+nl+nl;
+  msg+='👊 Invictos FC - Nunca Rendidos!';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+};
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 async function startListeners(){
