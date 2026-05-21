@@ -526,7 +526,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 <div class="sync-ov" id="syncOverlay"><div class="sync-spin"></div><div class="sync-txt">SINCRONIZANDO...</div></div>
 <div class="toast" id="toast"></div>
 
-<script type="module">
+<script type="module">    var confHtml=totalConf>0?'<div class="ng-conf"><span class="ng-conf-count">'+totalConf+'</span> confirmado'+(totalConf!==1?'s':'')+(guestCount>0?' <span style="font-size:.6rem;color:#E040FB">(+'+guestCount+' conv.)</span>':'')+'</div>':'';
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -637,6 +637,8 @@ function renderHome(){
     const isLive=liveStatus==='live';
     const du=daysUntil(n.date);
     const confCount=cache.confirmed.length;
+    const guestCount=(cache.guests||[]).filter(function(g){return g.gameId===n.id;}).length;
+    const totalConf=confCount+guestCount;
     const confNames=cache.players.filter(p=>cache.confirmed.includes(p.id)).slice(0,3).map(p=>p.nick||p.name.split(' ')[0]).join(', ');
     ns.innerHTML=`<div class="ngc ${isLive?'live':''}" onclick="openGameDetail('${n.id}')">
       <div class="ng-top">
@@ -1014,6 +1016,22 @@ window.showPlayerDetail=function(id){
     <button class="btn-can admin-only" style="color:#F87171;border-color:rgba(239,68,68,.3)" onclick="deletePlayer('${id}')">🗑️ Remover Jogador</button>`;
   renderPlayerPhotos(id);
   openModal('playerDetail');
+  // Inject position chips via DOM
+  setTimeout(function(){
+    var pdc=document.getElementById('playerDetailContent');if(!pdc)return;
+    var posDiv=document.createElement('div');
+    posDiv.style.cssText='margin-bottom:12px';
+    var pchips='';
+    var PPOS=['Goleiro','Zagueiro','Lat. Direito','Lat. Esquerdo','Volante','Atacante','Centroavante'];
+    PPOS.forEach(function(pos){
+      var active=p.pos===pos?' active':'';
+      pchips+='<button type="button" class="fb ppos-chip'+active+'" onclick="savePlayerPos(\''+pos+'\',\''+id+'\',this)">'+pos+'</button> ';
+    });
+    posDiv.innerHTML='<div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:7px">POSICAO</div><div style="display:flex;flex-wrap:wrap;gap:5px">'+pchips+'</div>';
+    var btns=pdc.querySelectorAll('.btn-can');
+    if(btns.length)pdc.insertBefore(posDiv,btns[0]);
+    else pdc.appendChild(posDiv);
+  },50);
 };
 
 window.editPlayerPhoto=function(event,pid){
@@ -1686,6 +1704,17 @@ window.convocarGrupo=function(){
   msg+='👊 Invictos FC - Nunca Rendidos!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
+window.savePlayerPos=async function(pos,pid,btn){
+  const p=cache.players.find(x=>x.id===pid);if(!p)return;
+  showSync(true);
+  try{
+    await setDoc(doc(db,'players',pid),{...p,pos:pos});
+    showToast('Posicao salva: '+pos+' OK');
+    document.querySelectorAll('.ppos-chip').forEach(function(b){b.classList.remove('active');});
+    if(btn)btn.classList.add('active');
+  }catch(e){showToast('Erro!');}
+  showSync(false);
+};
 window.selectPos=function(pos,btn){
   document.getElementById('p-pos').value=pos;
   document.querySelectorAll('.pos-chip').forEach(function(b){b.classList.remove('active');});
@@ -1706,6 +1735,8 @@ async function startListeners(){
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'guests'),function(snap){
     cache.guests=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    renderHome();
+    renderConfirmList();
     if(window._currentGameId&&document.getElementById('modal-gameDetail').classList.contains('open')){
       renderGuestSection(window._currentGameId);
     }
