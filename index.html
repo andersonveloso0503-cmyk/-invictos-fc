@@ -1769,7 +1769,11 @@ async function startListeners(){
 async function init(){
   // Set logos
   ['spl-logo','hl','hero-logo'].forEach(cls=>{document.querySelectorAll('.'+cls).forEach(el=>el.src=LOGO);});
-  document.querySelectorAll('#ifc-photos img').forEach(function(el){cache.teamPhotos.push(el.src);});
+  // Load team photos lazily - don't block init
+  setTimeout(function(){
+    document.querySelectorAll('#ifc-photos img').forEach(function(el){cache.teamPhotos.push(el.src);});
+    renderTeamPhotos();
+  },3000);
   buildEmoji();loadLocal();
   if(localStorage.getItem('ifc_admin')==='1'){isAdmin=true;}
   renderAll();updateAdminUI();
