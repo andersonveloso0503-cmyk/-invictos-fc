@@ -526,7 +526,24 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 <div class="sync-ov" id="syncOverlay"><div class="sync-spin"></div><div class="sync-txt">SINCRONIZANDO...</div></div>
 <div class="toast" id="toast"></div>
 
-<script type="module">    var confHtml=totalConf>0?'<div class="ng-conf"><span class="ng-conf-count">'+totalConf+'</span> confirmado'+(totalConf!==1?'s':'')+(guestCount>0?' <span style="font-size:.6rem;color:#E040FB">(+'+guestCount+' conv.)</span>':'')+'</div>':'';
+<div class="modal-bg" id="modal-changePos">
+  <div class="modal">
+    <div class="mh"></div>
+    <div class="mt2">POSIÇÃO DO JOGADOR</div>
+    <div style="font-size:.72rem;color:var(--tm);margin-bottom:14px" id="changePosName"></div>
+    <div style="display:flex;flex-direction:column">
+          <button class="btn-sub" style="margin-bottom:6px" onclick="confirmPos('Goleiro')">Goleiro</button>
+          <button class="btn-sub" style="margin-bottom:6px" onclick="confirmPos('Zagueiro')">Zagueiro</button>
+          <button class="btn-sub" style="margin-bottom:6px" onclick="confirmPos('Lat. Direito')">Lat. Direito</button>
+          <button class="btn-sub" style="margin-bottom:6px" onclick="confirmPos('Lat. Esquerdo')">Lat. Esquerdo</button>
+          <button class="btn-sub" style="margin-bottom:6px" onclick="confirmPos('Volante')">Volante</button>
+          <button class="btn-sub" style="margin-bottom:6px" onclick="confirmPos('Atacante')">Atacante</button>
+          <button class="btn-sub" style="margin-bottom:6px" onclick="confirmPos('Centroavante')">Centroavante</button>
+    </div>
+    <button class="btn-can" style="margin-top:8px" onclick="closeModal('changePos')">CANCELAR</button>
+  </div>
+</div>
+<script type="module">    var confHtml=totalConf>0?'<div class="ng-conf"><span class="ng-conf-count">'+totalConf+'</span> confirmado'+(totalConf!==1?'s':'')+(guestCount>0?' <span style="font-size:.6rem;color:#E040FB">(+'+guestCount+')</span>':'')+'</div>':'';
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -637,7 +654,7 @@ function renderHome(){
     const isLive=liveStatus==='live';
     const du=daysUntil(n.date);
     const confCount=cache.confirmed.length;
-    const guestCount=(cache.guests||[]).filter(g=>g.gameId===n.id).length;
+    const guestCount=(cache.guests||[]).filter(function(g){return g.gameId===n.id;}).length;
     const totalConf=confCount+guestCount;
     const confNames=cache.players.filter(p=>cache.confirmed.includes(p.id)).slice(0,3).map(p=>p.nick||p.name.split(' ')[0]).join(', ');
     ns.innerHTML=`<div class="ngc ${isLive?'live':''}" onclick="openGameDetail('${n.id}')">
@@ -1014,26 +1031,19 @@ window.showPlayerDetail=function(id){
       ${[['Gols',s.goals],['Ass.',s.assists],['Jogos',s.games],['G/J',s.games>0?Math.round((s.goals/s.games)*10)/10:0]].map(([l,v])=>`<div style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:8px 4px;text-align:center"><div style="font-family:'Cinzel',serif;font-size:1.25rem;color:var(--gb)">${v}</div><div style="font-size:.52rem;color:var(--tm);text-transform:uppercase">${l}</div></div>`).join('')}
     </div>
     <button class="btn-can admin-only" style="color:#F87171;border-color:rgba(239,68,68,.3)" onclick="deletePlayer('${id}')">🗑️ Remover Jogador</button>`;
+  var pdContent=document.getElementById('playerDetailContent');
+  if(pdContent){
+    var posBtn=document.createElement('button');
+    posBtn.className='btn-can';
+    posBtn.style.cssText='border-color:var(--gd);color:var(--g);margin-bottom:8px;width:100%';
+    posBtn.innerHTML='🎯 Posicao: '+(p.pos||'Nao definida')+' — Alterar';
+    posBtn.onclick=function(){openChangePos(id);};
+    var firstBtn=pdContent.querySelector('.btn-can');
+    if(firstBtn)pdContent.insertBefore(posBtn,firstBtn);
+    else pdContent.appendChild(posBtn);
+  }
   renderPlayerPhotos(id);
   openModal('playerDetail');
-  setTimeout(function(){
-    var el=document.getElementById('playerDetailContent');if(!el)return;
-    var PPOS=['Goleiro','Zagueiro','Lat. Direito','Lat. Esquerdo','Volante','Atacante','Centroavante'];
-    var div=document.createElement('div');
-    div.style.marginBottom='12px';
-    div.innerHTML='<div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:7px">POSICAO</div><div style="display:flex;flex-wrap:wrap;gap:5px" id="posChipsDetail"></div>';
-    var btns=el.querySelectorAll('.btn-can');
-    if(btns.length)el.insertBefore(div,btns[0]);else el.appendChild(div);
-    var grid=document.getElementById('posChipsDetail');if(!grid)return;
-    PPOS.forEach(function(pos){
-      var btn=document.createElement('button');
-      btn.type='button';
-      btn.className='fb ppos-chip'+(p.pos===pos?' active':'');
-      btn.textContent=pos;
-      btn.onclick=function(){savePlayerPos(pos,id,this);};
-      grid.appendChild(btn);
-    });
-  },80);
 };
 
 window.editPlayerPhoto=function(event,pid){
@@ -1706,17 +1716,6 @@ window.convocarGrupo=function(){
   msg+='👊 Invictos FC - Nunca Rendidos!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
-window.savePlayerPos=async function(pos,pid,btn){
-  const p=cache.players.find(x=>x.id===pid);if(!p)return;
-  showSync(true);
-  try{
-    await setDoc(doc(db,'players',pid),{...p,pos:pos});
-    showToast('Posicao: '+pos);
-    document.querySelectorAll('.ppos-chip').forEach(b=>b.classList.remove('active'));
-    if(btn)btn.classList.add('active');
-  }catch(e){showToast('Erro!');}
-  showSync(false);
-};
 window.selectPos=function(pos,btn){
   document.getElementById('p-pos').value=pos;
   document.querySelectorAll('.pos-chip').forEach(function(b){b.classList.remove('active');});
@@ -1728,6 +1727,26 @@ window.selectGuestPos=function(pos,btn){
   btn.classList.add('active');
 };
 window._guestPos='';
+window._changePosId=null;
+window.openChangePos=function(pid){
+  window._changePosId=pid;
+  var p=cache.players.find(function(x){return x.id===pid;});
+  var nameEl=document.getElementById('changePosName');
+  if(nameEl)nameEl.textContent=(p?p.name:'')+(p&&p.pos?' — '+p.pos:'');
+  openModal('changePos');
+};
+window.confirmPos=async function(pos){
+  var pid=window._changePosId;if(!pid)return;
+  var p=cache.players.find(function(x){return x.id===pid;});if(!p)return;
+  showSync(true);
+  try{
+    await setDoc(doc(db,'players',pid),Object.assign({},p,{pos:pos}));
+    closeModal('changePos');
+    showToast('Posicao: '+pos);
+    showPlayerDetail(pid);
+  }catch(e){showToast('Erro!');}
+  showSync(false);
+};
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 async function startListeners(){
@@ -1756,17 +1775,11 @@ async function init(){
   renderAll();updateAdminUI();
   document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
-  // Hide splash quickly - don't wait for Firebase
-  setTimeout(function(){
-    var sp=document.getElementById('splash');
-    if(sp){sp.classList.add('hide');setTimeout(function(){if(sp.parentNode)sp.parentNode.removeChild(sp);},800);}
-  },1800);
-  // Start listeners first so app works immediately
+  setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash').remove(),800);},2200);
   await startListeners();
-  // Seed games in background after app is ready
-  setTimeout(function(){seedGames().catch(function(){});},3000);
+  setTimeout(function(){seedGames().catch(function(){});},2000);
   // Refresh live status every 30s
-  setInterval(function(){renderHome();},30000);
+  setInterval(()=>renderHome(),30000);
 }
 
 init();</script>
