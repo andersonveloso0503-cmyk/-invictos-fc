@@ -1750,8 +1750,8 @@ window.confirmPos=async function(pos){
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 async function startListeners(){
-  onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();if(_appReady){renderAll();}setOnline(true);},()=>setOnline(false));
-  onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();if(_appReady){renderAll();}}});
+  onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();setOnline(true);},()=>setOnline(false));
+  onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
   onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'guests'),function(snap){
@@ -1766,41 +1766,24 @@ async function startListeners(){
 }
 
 // ===== INIT =====
-var _appReady=false;
-function init(){
-  // SPLASH: garantido sumir em 1.5s no matter what
+async function init(){
+  // Set logos
+  ['spl-logo','hl','hero-logo'].forEach(cls=>{document.querySelectorAll('.'+cls).forEach(el=>el.src=LOGO);});
+  // Load team photos lazily - don't block init
   setTimeout(function(){
-    try{
-      var sp=document.getElementById('splash');
-      if(sp){sp.classList.add('hide');setTimeout(function(){try{sp.parentNode.removeChild(sp);}catch(e){}},600);}
-    }catch(e){}
-  },1500);
-
-  // Setup basico
-  try{
-    ['spl-logo','hl','hero-logo'].forEach(function(cls){
-      document.querySelectorAll('.'+cls).forEach(function(el){el.src=LOGO;});
-    });
-    buildEmoji();
-    loadLocal();
-    if(localStorage.getItem('ifc_admin')==='1'){isAdmin=true;}
-    document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
-    document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
-  }catch(e){}
-
-  // Render do cache local (sem Firebase)
-  setTimeout(function(){try{_appReady=true;renderAll();updateAdminUI();}catch(e){}},100);
-
-  // Firebase em background - nao bloqueia nada
-  setTimeout(function(){try{startListeners();}catch(e){}},200);
-
-  // Fotos e seed depois que tudo abriu
-  setTimeout(function(){
-    try{document.querySelectorAll('#ifc-photos img').forEach(function(el){cache.teamPhotos.push(el.src);});renderTeamPhotos();}catch(e){}
-    try{seedGames();}catch(e){}
-  },4000);
-
-  setInterval(function(){try{renderHome();}catch(e){}},30000);
+    document.querySelectorAll('#ifc-photos img').forEach(function(el){cache.teamPhotos.push(el.src);});
+    renderTeamPhotos();
+  },3000);
+  buildEmoji();loadLocal();
+  if(localStorage.getItem('ifc_admin')==='1'){isAdmin=true;}
+  renderAll();updateAdminUI();
+  document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
+  setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash').remove(),800);},2200);
+  await startListeners();
+  setTimeout(function(){seedGames().catch(function(){});},2000);
+  // Refresh live status every 30s
+  setInterval(()=>renderHome(),30000);
 }
 
 init();</script>
