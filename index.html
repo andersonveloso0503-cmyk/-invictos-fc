@@ -788,8 +788,8 @@ window.openGameDetail=function(id){window._currentGameId=id;
     // Add guest input section at bottom
     var guestDiv=document.createElement('div');
     guestDiv.id='guestSection';
-    guestDiv.style.cssText='margin-top:12px;padding:10px;background:var(--s2);border:1px solid rgba(171,71,188,.4);border-radius:9px';
-    guestDiv.innerHTML='<div style="font-size:.6rem;color:#E040FB;letter-spacing:2px;margin-bottom:7px">🎟️ CONVIDADOS</div>';
+    guestDiv.style.cssText='margin-top:14px;padding:12px;background:var(--s2);border:1px solid rgba(171,71,188,.5);border-radius:10px';
+    guestDiv.innerHTML='';
     gc.appendChild(guestDiv);
     renderGuestSection(id);
   }
@@ -801,20 +801,23 @@ function renderGuestSection(gameId){
   var el=document.getElementById('guestSection');
   if(!el)return;
   var guests=(cache.guests||[]).filter(function(g){return g.gameId===gameId;});
-  var chips=guests.map(function(g){
-    var del=isAdmin?'<span data-gid="'+g.id+'" data-gameid="'+gameId+'" onclick="removeGuest(this.dataset.gid,this.dataset.gameid)" style="margin-left:4px;cursor:pointer;color:#F87171;font-size:.7rem">✕</span>':'';
-    return'<div class="conf-chip" style="border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.1)">🎟️ '+g.name+del+'</div>';
-  }).join('');
-  el.innerHTML='<div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:2px">'+chips+'</div>'
-    +'<div style="display:flex;gap:6px;margin-top:4px">'
-    +'<input class="fi" id="guestNameInput" placeholder="Nome do convidado" style="flex:1">'
-    +'<button class="btn-sub" style="padding:8px 12px;white-space:nowrap" data-gameid="'+gameId+'" onclick="addGuest(this.dataset.gameid)">+ ADD</button>'
+  var chips=guests.length>0?guests.map(function(g){
+    var del=isAdmin?'<span data-gid="'+g.id+'" data-gameid="'+gameId+'" onclick="removeGuest(this.dataset.gid,this.dataset.gameid)" style="margin-left:5px;cursor:pointer;color:#F87171">✕</span>':'';
+    return'<div class="conf-chip" style="border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.12)">🎟️ '+g.name+del+'</div>';
+  }).join(''):'<div style="font-size:.7rem;color:var(--tm);margin-bottom:8px">Nenhum convidado ainda</div>';
+  el.innerHTML=
+    '<div style="font-size:.62rem;color:#E040FB;letter-spacing:2px;font-weight:700;margin-bottom:8px">🎟️ CONVIDADOS'+(guests.length>0?' ('+guests.length+')':'')+'</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+chips+'</div>'
+    +'<div style="font-size:.6rem;color:var(--tm);letter-spacing:1px;margin-bottom:5px">ADICIONAR CONVIDADO</div>'
+    +'<div style="display:flex;gap:6px">'
+    +'<input class="fi" id="guestNameInput" placeholder="Nome do convidado" style="flex:1;padding:9px 10px">'
+    +'<button class="btn-sub" style="padding:9px 14px;white-space:nowrap;font-size:.78rem" data-gameid="'+gameId+'" onclick="addGuest(this.dataset.gameid)">➕ ADD</button>'
     +'</div>';
-  // Also update confirmed count badge
+  // Update confirmed count badge
   var badge=document.getElementById('confCountBadge');
   if(badge){
     var total=(cache.confirmed||[]).length+guests.length;
-    badge.textContent='CONFIRMADOS ('+total+')';
+    badge.textContent='✅ CONFIRMADOS ('+total+')';
   }
 }
 window.addGuest=async function(gameId){
