@@ -808,11 +808,9 @@ function renderGuestSection(gameId){
   el.innerHTML=
     '<div style="font-size:.62rem;color:#E040FB;letter-spacing:2px;font-weight:700;margin-bottom:8px">🎟️ CONVIDADOS'+(guests.length>0?' ('+guests.length+')':'')+'</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+chips+'</div>'
-    +'<div style="font-size:.6rem;color:var(--tm);letter-spacing:1px;margin-bottom:5px">ADICIONAR CONVIDADO</div>'
-    +'<div style="display:flex;gap:6px">'
-    +'<input class="fi" id="guestNameInput" placeholder="Nome do convidado" style="flex:1;padding:9px 10px">'
-    +'<button class="btn-sub" style="padding:9px 14px;white-space:nowrap;font-size:.78rem" data-gameid="'+gameId+'" onclick="addGuest(this.dataset.gameid)">➕ ADD</button>'
-    +'</div>';
+    +'<div style="font-size:.6rem;color:var(--tm);letter-spacing:1px;margin-bottom:6px">ADICIONAR CONVIDADO</div>'
+    +'<input class="fi" id="guestNameInput" placeholder="Nome do convidado" style="width:100%;padding:11px 12px;font-size:.95rem;margin-bottom:8px">'
+    +'<button class="btn-sub" style="width:100%;padding:11px;font-size:.85rem" data-gameid="'+gameId+'" onclick="addGuest(this.dataset.gameid)">➕ ADICIONAR CONVIDADO</button>';
   // Update confirmed count badge
   var badge=document.getElementById('confCountBadge');
   if(badge){
