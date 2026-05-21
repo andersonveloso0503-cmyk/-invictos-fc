@@ -248,7 +248,7 @@ function checkManut(){
   var v=document.getElementById('manut-pass').value;
   if(v==='invictos2015'){
     document.getElementById('manut-screen').style.display='none';
-    localStorage.setItem('ifc_manut_ok','1');
+    localStorage.setItem('ifc_manut_ok','v2');
   } else {
     document.getElementById('manut-err').style.display='block';
     document.getElementById('manut-pass').value='';
@@ -256,7 +256,7 @@ function checkManut(){
 }
 document.getElementById('manut-pass').addEventListener('keydown',function(e){if(e.key==='Enter')checkManut();});
 // If already authenticated, skip maintenance screen
-if(localStorage.getItem('ifc_manut_ok')==='1'){
+if(localStorage.getItem('ifc_manut_ok')==='v2'){
   document.getElementById('manut-screen').style.display='none';
 }
 </script>
