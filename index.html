@@ -1766,39 +1766,24 @@ async function startListeners(){
 }
 
 // ===== INIT =====
-function init(){
-  // SPLASH some em 1.5s garantido - nao importa o que aconteca
-  var _sp=document.getElementById('splash');
+async function init(){
+  // Set logos
+  ['spl-logo','hl','hero-logo'].forEach(cls=>{document.querySelectorAll('.'+cls).forEach(el=>el.src=LOGO);});
+  // Load team photos lazily - don't block init
   setTimeout(function(){
-    if(_sp&&_sp.parentNode){_sp.classList.add('hide');setTimeout(function(){if(_sp.parentNode)_sp.parentNode.removeChild(_sp);},800);}
-  },1500);
-
-  // Setup basico imediato
-  try{['spl-logo','hl','hero-logo'].forEach(function(cls){document.querySelectorAll('.'+cls).forEach(function(el){el.src=LOGO;});});}catch(e){}
-  try{buildEmoji();}catch(e){}
-  try{loadLocal();}catch(e){}
+    document.querySelectorAll('#ifc-photos img').forEach(function(el){cache.teamPhotos.push(el.src);});
+    renderTeamPhotos();
+  },3000);
+  buildEmoji();loadLocal();
   if(localStorage.getItem('ifc_admin')==='1'){isAdmin=true;}
-  try{document.getElementById('g-date').value=new Date().toISOString().split('T')[0];}catch(e){}
-  try{document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];}catch(e){}
-
-  // Render local cache
-  try{renderAll();updateAdminUI();}catch(e){}
-
-  // Firebase em background - nao bloqueia splash
-  import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js").then(function(){
-    startListeners().catch(function(e){console.log('listeners err',e);});
-  }).catch(function(e){
-    console.log('Firebase import err',e);
-    startListeners().catch(function(){});
-  });
-
-  // Fotos do time depois
-  setTimeout(function(){
-    try{document.querySelectorAll('#ifc-photos img').forEach(function(el){cache.teamPhotos.push(el.src);});renderTeamPhotos();}catch(e){}
-    try{seedGames();}catch(e){}
-  },4000);
-
-  setInterval(function(){try{renderHome();}catch(e){}},30000);
+  renderAll();updateAdminUI();
+  document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
+  setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash').remove(),800);},2200);
+  await startListeners();
+  setTimeout(function(){seedGames().catch(function(){});},2000);
+  // Refresh live status every 30s
+  setInterval(()=>renderHome(),30000);
 }
 
 init();</script>
