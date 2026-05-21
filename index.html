@@ -1119,29 +1119,45 @@ function renderRankingNotas(){
 
 // ===== CONFIRMED / ABSENT =====
 function renderConfirmList(){
-  const el=document.getElementById('confirmList');if(!el)return;
-  if(cache.players.length===0){el.innerHTML=`<div class="es"><div class="ei">\ud83d\udc65</div><p>Adicione jogadores primeiro</p></div>`;return;}
-  const today=todayStr();
-  const nextGame=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
-  const isLive=nextGame&&getGameStatus(nextGame)==='live';
-  const count=cache.confirmed.length;
-  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
-    <span style="font-size:.7rem;color:var(--tm)">${isLive?'\ud83d\udd12 Jogo em andamento':'Toque para confirmar'}</span>
-    <span class="ccount">${count} confirmado${count!==1?'s':''}</span>
-  </div>`+
-  cache.players.map(p=>{
-    const isConf=cache.confirmed.includes(p.id);
-    const isAbsent=cache.absent.includes(p.id);
-    const av=p.photo?'<img src="'+p.photo+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0">':'<span style="font-size:.95rem;flex-shrink:0">'+(p.emoji||'\u26bd')+'</span>';
-    const cls=isConf?'conf':isAbsent?'absent':'';
-    const ck=isConf?'\u2713':isAbsent?'\u2715':'';
-    const badge=isConf?'<span style="font-size:.65rem;color:#4ADE80">\u2705 CONFIRMADO</span>':isAbsent?'<span style="font-size:.65rem;color:#F87171">\u274c AUSENTE</span>':'';
-    const fn=isLive?'':'toggleConf(\''+p.id+'\')';
+  var el=document.getElementById('confirmList');if(!el)return;
+  if(cache.players.length===0){el.innerHTML='<div class="es"><p>Adicione jogadores primeiro</p></div>';return;}
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var isLive=nextGame&&getGameStatus(nextGame)==='live';
+  var gameId=nextGame?nextGame.id:null;
+  var guests=gameId?(cache.guests||[]).filter(function(g){return g.gameId===gameId;}).map(function(g){return g.name;}):[]; 
+  var count=cache.confirmed.length+guests.length;
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'
+    +'<span style="font-size:.7rem;color:var(--tm)">'+(isLive?'🔒 Jogo em andamento':'Toque para confirmar')+'</span>'
+    +'<span class="ccount">'+count+' confirmado'+(count!==1?'s':'')+'</span></div>';
+  h+=cache.players.map(function(p){
+    var isConf=cache.confirmed.includes(p.id);
+    var isAbsent=cache.absent.includes(p.id);
+    var av=p.photo?'<img src="'+p.photo+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0">':'<span style="font-size:.95rem;flex-shrink:0">'+(p.emoji||'⚽')+'</span>';
+    var cls=isConf?'conf':isAbsent?'absent':'';
+    var ck=isConf?'✓':isAbsent?'✕':'';
+    var badge=isConf?'<span style="font-size:.65rem;color:#4ADE80">✅ CONFIRMADO</span>':isAbsent?'<span style="font-size:.65rem;color:#F87171">❌ AUSENTE</span>':'';
+    var fn=isLive?'':'toggleConf(\''+p.id+'\')';
     return'<div class="ci '+cls+'" onclick="'+fn+'" style="'+(isLive?'cursor:default;':'')+'">'+
       '<div class="cck">'+ck+'</div>'+av+
-      '<div style="flex:1"><div class="cname">'+(p.nick||p.name)+'</div><div class="cpos">'+(p.pos||'\u2014')+'</div></div>'+
+      '<div style="flex:1"><div class="cname">'+(p.nick||p.name)+'</div><div class="cpos">'+(p.pos||'—')+'</div></div>'+
       badge+'</div>';
   }).join('');
+  // Add guests to the list
+  if(guests.length>0){
+    h+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--br)">';
+    h+='<div style="font-size:.6rem;color:#E040FB;letter-spacing:2px;margin-bottom:5px">🎟️ CONVIDADOS</div>';
+    h+=guests.map(function(name){
+      return'<div class="ci conf" style="border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.08)">'
+        +'<div class="cck" style="background:rgba(171,71,188,.5);border-color:rgba(171,71,188,.5);color:white">✓</div>'
+        +'<span style="font-size:.95rem;flex-shrink:0">🎟️</span>'
+        +'<div style="flex:1"><div class="cname">'+name+'</div><div class="cpos">Convidado</div></div>'
+        +'<span style="font-size:.65rem;color:#E040FB">CONVIDADO</span>'
+        +'</div>';
+    }).join('');
+    h+='</div>';
+  }
+  el.innerHTML=h;
 }
 
 window.toggleConf=async function(pid){
@@ -1172,7 +1188,11 @@ window.limparConf=async function(){
 
 window.compartilharLista=function(){
   var conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
-  if(conf.length===0){showToast('Nenhum jogador confirmado!');return;}
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}).map(function(g){return g.name;}):[]; 
+  var total=conf.length+gameGuests.length;
+  if(total===0){showToast('Nenhum confirmado!');return;}
   var dt=document.getElementById('wa-date').value;
   var tm=document.getElementById('wa-time').value;
   var lc=document.getElementById('wa-location').value.trim();
@@ -1181,14 +1201,18 @@ window.compartilharLista=function(){
   var nl='\n';
   var msg='LISTA DO JOGO - INVICTOS FC'+nl;
   if(dt)msg+=fmtDateWA(dt);if(tm)msg+=' as '+tm+'h';if(dt||tm)msg+=nl;
-  if(lc)msg+=lc+nl;
-  msg+=nl+'GOLEIROS ('+gols.length+'):'+nl;
+  if(lc)msg+='📍 '+lc+nl;
+  msg+=nl+'🧤 GOLEIROS ('+gols.length+'):'+nl;
   gols.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
-  msg+=nl+'JOGADORES ('+out.length+'):'+nl;
+  msg+=nl+'⚽ JOGADORES ('+out.length+'):'+nl;
   out.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
-  msg+=nl+'Total: '+conf.length+' confirmado'+(conf.length!==1?'s':'');
+  if(gameGuests.length>0){
+    msg+=nl+'🎟️ CONVIDADOS ('+gameGuests.length+'):'+nl;
+    gameGuests.forEach(function(name,i){msg+=(i+1)+'. '+name+' (convidado)'+nl;});
+  }
+  msg+=nl+'Total: '+total+' confirmado'+(total!==1?'s':'');
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-};
+}
 
 window.convocarWA=function(){
   var op=document.getElementById('wa-opponent').value.trim();
