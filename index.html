@@ -2,10 +2,6 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="dns-prefetch" href="https://www.gstatic.com">
-<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
-<link rel="dns-prefetch" href="https://firestore.googleapis.com">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="theme-color" content="#8B1A1A">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -547,7 +543,15 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <button class="btn-can" style="margin-top:8px" onclick="closeModal('changePos')">CANCELAR</button>
   </div>
 </div>
-<script type="module">    var confHtml=totalConf>0?'<div class="ng-conf"><span class="ng-conf-count">'+totalConf+'</span> confirmado'+(totalConf!==1?'s':'')+(guestCount>0?' <span style="font-size:.6rem;color:#E040FB">(+'+guestCount+')</span>':'')+'</div>':'';
+<script>
+// Garantir que splash some sempre - independente de erros
+setTimeout(function(){
+  var sp=document.getElementById('splash');
+  if(sp){sp.classList.add('hide');setTimeout(function(){if(sp&&sp.parentNode)sp.parentNode.removeChild(sp);},600);}
+},2000);
+</script>
+<script type="module">
+    var confHtml=totalConf>0?'<div class="ng-conf"><span class="ng-conf-count">'+totalConf+'</span> confirmado'+(totalConf!==1?'s':'')+(guestCount>0?' <span style="font-size:.6rem;color:#E040FB">(+'+guestCount+')</span>':'')+'</div>':'';
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
