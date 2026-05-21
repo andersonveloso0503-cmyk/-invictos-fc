@@ -675,7 +675,7 @@ function renderHome(){
 }
 
 // ===== GAME DETAIL MODAL =====
-window.openGameDetail=function(id){
+window.openGameDetail=function(id){window._currentGameId=id;
   const g=cache.games.find(x=>x.id===id);if(!g)return;
   const liveStatus=getGameStatus(g);
   const isLive=liveStatus==='live';
@@ -760,8 +760,81 @@ window.openGameDetail=function(id){
     ${waAfter}
   `;
   openModal('gameDetail');
+  // Add guest section to modal
+  var gc=document.getElementById('gameDetailContent');
+  if(gc){
+    var guests=(cache.guests||[]).filter(function(g){return g.gameId===id;});
+    // Update confirmed count in modal to include guests
+    var confBadges=gc.querySelectorAll('.fl');
+    confBadges.forEach(function(b){
+      if(b.textContent.indexOf('CONFIRMADOS')>=0){
+        b.id='confCountBadge';
+        var total=(confPlayers.length)+(guests.length);
+        b.textContent='✅ CONFIRMADOS ('+total+')';
+        // Append guest chips after player chips
+        var chipDiv=b.nextElementSibling;
+        if(chipDiv&&guests.length>0){
+          guests.forEach(function(g){
+            var chip=document.createElement('div');
+            chip.className='conf-chip';
+            chip.style.cssText='border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.1)';
+            var del=isAdmin?'<span data-gid="'+g.id+'" data-gameid="'+id+'" onclick="removeGuest(this.dataset.gid,this.dataset.gameid)" style="margin-left:4px;cursor:pointer;color:#F87171;font-size:.7rem">✕</span>':'';
+            chip.innerHTML='🎟️ '+g.name+del;
+            chipDiv.appendChild(chip);
+          });
+        }
+      }
+    });
+    // Add guest input section at bottom
+    var guestDiv=document.createElement('div');
+    guestDiv.id='guestSection';
+    guestDiv.style.cssText='margin-top:12px;padding:10px;background:var(--s2);border:1px solid rgba(171,71,188,.4);border-radius:9px';
+    guestDiv.innerHTML='<div style="font-size:.6rem;color:#E040FB;letter-spacing:2px;margin-bottom:7px">🎟️ CONVIDADOS</div>';
+    gc.appendChild(guestDiv);
+    renderGuestSection(id);
+  }
 };
 
+
+// ===== CONVIDADOS =====
+function renderGuestSection(gameId){
+  var el=document.getElementById('guestSection');
+  if(!el)return;
+  var guests=(cache.guests||[]).filter(function(g){return g.gameId===gameId;});
+  var chips=guests.map(function(g){
+    var del=isAdmin?'<span data-gid="'+g.id+'" data-gameid="'+gameId+'" onclick="removeGuest(this.dataset.gid,this.dataset.gameid)" style="margin-left:4px;cursor:pointer;color:#F87171;font-size:.7rem">✕</span>':'';
+    return'<div class="conf-chip" style="border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.1)">🎟️ '+g.name+del+'</div>';
+  }).join('');
+  el.innerHTML='<div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:2px">'+chips+'</div>'
+    +'<div style="display:flex;gap:6px;margin-top:4px">'
+    +'<input class="fi" id="guestNameInput" placeholder="Nome do convidado" style="flex:1">'
+    +'<button class="btn-sub" style="padding:8px 12px;white-space:nowrap" data-gameid="'+gameId+'" onclick="addGuest(this.dataset.gameid)">+ ADD</button>'
+    +'</div>';
+  // Also update confirmed count badge
+  var badge=document.getElementById('confCountBadge');
+  if(badge){
+    var total=(cache.confirmed||[]).length+guests.length;
+    badge.textContent='CONFIRMADOS ('+total+')';
+  }
+}
+window.addGuest=async function(gameId){
+  var inp=document.getElementById('guestNameInput');
+  var name=inp?inp.value.trim():'';
+  if(!name){showToast('Digite o nome!');return;}
+  var id='guest_'+Date.now();
+  try{
+    await setDoc(doc(db,'guests',id),{id:id,gameId:gameId,name:name,createdAt:Date.now()});
+    inp.value='';
+    showToast('Convidado adicionado! 🎟️');
+  }catch(e){showToast('Erro!');}
+};
+window.removeGuest=async function(guestId,gameId){
+  if(!confirm('Remover convidado?'))return;
+  try{
+    await deleteDoc(doc(db,'guests',guestId));
+    showToast('Removido');
+  }catch(e){showToast('Erro!');}
+};
 window.saveGameLocation=async function(id){
   if(!isAdmin){showToast('🔒 Admin only');return;}
   const loc=document.getElementById('gd-loc').value.trim();
@@ -1570,6 +1643,12 @@ async function startListeners(){
   onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
   onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
+  onSnapshot(collection(db,'guests'),function(snap){
+    cache.guests=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    if(window._currentGameId&&document.getElementById('modal-gameDetail').classList.contains('open')){
+      renderGuestSection(window._currentGameId);
+    }
+  });
   onSnapshot(collection(db,'confrats'),snap=>{cache.confrats=snap.docs.map(d=>({id:d.id,...d.data()}));renderConfratList();});
 }
 
