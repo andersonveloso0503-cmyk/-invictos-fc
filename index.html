@@ -1750,10 +1750,10 @@ window.confirmPos=async function(pos){
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 async function startListeners(){
-  onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();if(_appReady)renderAll();setOnline(true);},()=>setOnline(false));
-  onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();if(_appReady)renderAll();}});
-  onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();if(_appReady)renderConfirmList();});
-  onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();if(_appReady)renderConfirmList();});
+  onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();if(_appReady){renderAll();}setOnline(true);},()=>setOnline(false));
+  onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();if(_appReady){renderAll();}}});
+  onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
+  onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'guests'),function(snap){
     cache.guests=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     renderHome();
@@ -1762,48 +1762,44 @@ async function startListeners(){
       renderGuestSection(window._currentGameId);
     }
   });
-  onSnapshot(collection(db,'confrats'),snap=>{cache.confrats=snap.docs.map(d=>({id:d.id,...d.data()}));if(_appReady)renderConfratList();});
+  onSnapshot(collection(db,'confrats'),snap=>{cache.confrats=snap.docs.map(d=>({id:d.id,...d.data()}));renderConfratList();});
 }
 
 // ===== INIT =====
 var _appReady=false;
 function init(){
-  // Splash: hide after 1.5s no matter what
-  var sp=document.getElementById('splash');
+  // SPLASH: garantido sumir em 1.5s no matter what
   setTimeout(function(){
-    try{if(sp){sp.classList.add('hide');setTimeout(function(){if(sp&&sp.parentNode)sp.parentNode.removeChild(sp);},600);}}catch(e){}
+    try{
+      var sp=document.getElementById('splash');
+      if(sp){sp.classList.add('hide');setTimeout(function(){try{sp.parentNode.removeChild(sp);}catch(e){}},600);}
+    }catch(e){}
   },1500);
 
-  // Safe startup - wrap everything
+  // Setup basico
   try{
-    ['spl-logo','hl','hero-logo'].forEach(function(cls){document.querySelectorAll('.'+cls).forEach(function(el){el.src=LOGO;});});
+    ['spl-logo','hl','hero-logo'].forEach(function(cls){
+      document.querySelectorAll('.'+cls).forEach(function(el){el.src=LOGO;});
+    });
     buildEmoji();
     loadLocal();
     if(localStorage.getItem('ifc_admin')==='1'){isAdmin=true;}
     document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
     document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
-  }catch(e){console.log('init setup error',e);}
+  }catch(e){}
 
-  // Render from local cache immediately
-  setTimeout(function(){
-    try{_appReady=true;renderAll();updateAdminUI();}catch(e){}
-  },200);
+  // Render do cache local (sem Firebase)
+  setTimeout(function(){try{_appReady=true;renderAll();updateAdminUI();}catch(e){}},100);
 
-  // Firebase - non-blocking
-  setTimeout(function(){
-    try{startListeners();}catch(e){console.log('listeners error',e);}
-  },300);
+  // Firebase em background - nao bloqueia nada
+  setTimeout(function(){try{startListeners();}catch(e){}},200);
 
-  // Photos and seed - after app visible
+  // Fotos e seed depois que tudo abriu
   setTimeout(function(){
-    try{
-      document.querySelectorAll('#ifc-photos img').forEach(function(el){cache.teamPhotos.push(el.src);});
-      renderTeamPhotos();
-    }catch(e){}
+    try{document.querySelectorAll('#ifc-photos img').forEach(function(el){cache.teamPhotos.push(el.src);});renderTeamPhotos();}catch(e){}
     try{seedGames();}catch(e){}
-  },5000);
+  },4000);
 
-  // Live refresh
   setInterval(function(){try{renderHome();}catch(e){}},30000);
 }
 
