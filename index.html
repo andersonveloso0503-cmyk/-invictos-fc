@@ -447,16 +447,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     </div>
     <div class="frow">
       <div class="fg"><label class="fl">Posição</label>
-        <select class="fsel" id="p-pos">
-          <option value="">-- Selecione --</option>
-          <option value="Goleiro">Goleiro</option>
-          <option value="Zagueiro">Zagueiro</option>
-          <option value="Lateral">Lateral</option>
-          <option value="Volante">Volante</option>
-          <option value="Meia">Meia</option>
-          <option value="Atacante">Atacante</option>
-          <option value="Ponta">Ponta</option>
-        </select>
+        <div id="posChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px">
+          <button type="button" class="fb pos-chip" data-pos="Goleiro" onclick="selectPos('Goleiro',this)">Goleiro</button> <button type="button" class="fb pos-chip" data-pos="Zagueiro" onclick="selectPos('Zagueiro',this)">Zagueiro</button> <button type="button" class="fb pos-chip" data-pos="Lat. Direito" onclick="selectPos('Lat. Direito',this)">Lat. Direito</button> <button type="button" class="fb pos-chip" data-pos="Lat. Esquerdo" onclick="selectPos('Lat. Esquerdo',this)">Lat. Esquerdo</button> <button type="button" class="fb pos-chip" data-pos="Volante" onclick="selectPos('Volante',this)">Volante</button> <button type="button" class="fb pos-chip" data-pos="Atacante" onclick="selectPos('Atacante',this)">Atacante</button> <button type="button" class="fb pos-chip" data-pos="Centroavante" onclick="selectPos('Centroavante',this)">Centroavante</button>
+        </div>
+        <input type="hidden" id="p-pos" value="">
       </div>
       <div class="fg"><label class="fl">Nº Camisa</label><input class="fi" id="p-number" type="number" min="1" max="99" placeholder="10"></div>
     </div>
@@ -803,13 +797,14 @@ function renderGuestSection(gameId){
   var guests=(cache.guests||[]).filter(function(g){return g.gameId===gameId;});
   var chips=guests.length>0?guests.map(function(g){
     var del=isAdmin?'<span data-gid="'+g.id+'" data-gameid="'+gameId+'" onclick="removeGuest(this.dataset.gid,this.dataset.gameid)" style="margin-left:5px;cursor:pointer;color:#F87171">✕</span>':'';
-    return'<div class="conf-chip" style="border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.12)">🎟️ '+g.name+del+'</div>';
+    return'<div class="conf-chip" style="border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.12)">🎟️ '+g.name+(g.pos?' <span style="font-size:.6rem;opacity:.8">'+g.pos+'</span>':'')+del+'</div>';
   }).join(''):'<div style="font-size:.7rem;color:var(--tm);margin-bottom:8px">Nenhum convidado ainda</div>';
   el.innerHTML=
     '<div style="font-size:.62rem;color:#E040FB;letter-spacing:2px;font-weight:700;margin-bottom:8px">🎟️ CONVIDADOS'+(guests.length>0?' ('+guests.length+')':'')+'</div>'
     +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+chips+'</div>'
     +'<div style="font-size:.6rem;color:var(--tm);letter-spacing:1px;margin-bottom:6px">ADICIONAR CONVIDADO</div>'
     +'<input class="fi" id="guestNameInput" placeholder="Nome do convidado" style="width:100%;padding:11px 12px;font-size:.95rem;margin-bottom:8px">'
+    +'<div style="margin-bottom:7px"><div style="font-size:.6rem;color:var(--tm);letter-spacing:1px;margin-bottom:5px">POSIÇÃO DO CONVIDADO</div><div style=\"display:flex;flex-wrap:wrap;gap:4px\"><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Goleiro\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Goleiro</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Zagueiro\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Zagueiro</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Lat. Direito\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Lat. Direito</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Lat. Esquerdo\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Lat. Esquerdo</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Volante\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Volante</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Atacante\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Atacante</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Centroavante\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Centroavante</button></div></div>'
     +'<button class="btn-sub" style="width:100%;padding:11px;font-size:.85rem" data-gameid="'+gameId+'" onclick="addGuest(this.dataset.gameid)">➕ ADICIONAR CONVIDADO</button>';
   // Update confirmed count badge
   var badge=document.getElementById('confCountBadge');
@@ -824,7 +819,10 @@ window.addGuest=async function(gameId){
   if(!name){showToast('Digite o nome!');return;}
   var id='guest_'+Date.now();
   try{
-    await setDoc(doc(db,'guests',id),{id:id,gameId:gameId,name:name,createdAt:Date.now()});
+    var pos=window._guestPos||'';
+    await setDoc(doc(db,'guests',id),{id:id,gameId:gameId,name:name,pos:pos,createdAt:Date.now()});
+    window._guestPos='';
+    document.querySelectorAll('.guest-pos-chip').forEach(function(b){b.classList.remove('active');});
     inp.value='';
     showToast('Convidado adicionado! 🎟️');
   }catch(e){showToast('Erro!');}
@@ -972,9 +970,20 @@ function renderPlayers(){
 
 window.prevPhoto=function(event){
   const file=event.target.files[0];if(!file)return;
-  const r=new FileReader();r.onload=e=>{window._pPhotoData=e.target.result;const prev=document.getElementById('pPhotoPrev');prev.src=e.target.result;prev.style.display='block';document.getElementById('pPhotoEmoji').style.display='none';};r.readAsDataURL(file);
+  const img=new Image();const url=URL.createObjectURL(file);
+  img.onload=function(){
+    const max=400;let w=img.width,h=img.height;
+    if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}
+    const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    const data=cv.toDataURL('image/jpeg',0.75);
+    window._pPhotoData=data;
+    const prev=document.getElementById('pPhotoPrev');
+    prev.src=data;prev.style.display='block';
+    document.getElementById('pPhotoEmoji').style.display='none';
+    URL.revokeObjectURL(url);
+  };img.src=url;
 };
-
 window.savePlayer=async function(){
   if(!isAdmin){showToast('🔒 Apenas admin!');return;}
   const name=document.getElementById('p-name').value.trim();if(!name){showToast('Informe o nome!');return;}
@@ -1009,11 +1018,22 @@ window.showPlayerDetail=function(id){
 
 window.editPlayerPhoto=function(event,pid){
   const file=event.target.files[0];if(!file)return;
-  const r=new FileReader();r.onload=async e=>{
-    showSync(true);try{const p=cache.players.find(x=>x.id===pid);if(p){await setDoc(doc(db,'players',pid),{...p,photo:e.target.result});showPlayerDetail(pid);showToast('Foto atualizada!');}}catch(err){showToast('Erro!');}showSync(false);
-  };r.readAsDataURL(file);
+  const img=new Image();const url=URL.createObjectURL(file);
+  img.onload=async function(){
+    const max=400;let w=img.width,h=img.height;
+    if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}
+    const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    const data=cv.toDataURL('image/jpeg',0.75);
+    URL.revokeObjectURL(url);
+    showSync(true);
+    try{
+      const p=cache.players.find(x=>x.id===pid);
+      if(p){await setDoc(doc(db,'players',pid),{...p,photo:data});showPlayerDetail(pid);showToast('Foto atualizada! 📸');}
+    }catch(e){showToast('Erro ao salvar foto!');}
+    showSync(false);
+  };img.src=url;
 };
-
 window.deletePlayer=async function(id){if(!isAdmin){showToast('🔒 Apenas admin!');return;}if(!confirm('Remover jogador?'))return;await deleteDoc(doc(db,'players',id));closeModal('playerDetail');showToast('Removido');};
 
 // PLAYER PHOTOS
@@ -1125,7 +1145,7 @@ function renderConfirmList(){
   var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
   var isLive=nextGame&&getGameStatus(nextGame)==='live';
   var gameId=nextGame?nextGame.id:null;
-  var guests=gameId?(cache.guests||[]).filter(function(g){return g.gameId===gameId;}).map(function(g){return g.name;}):[]; 
+  var guests=gameId?(cache.guests||[]).filter(function(g){return g.gameId===gameId;}):[]; 
   var count=cache.confirmed.length+guests.length;
   var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'
     +'<span style="font-size:.7rem;color:var(--tm)">'+(isLive?'🔒 Jogo em andamento':'Toque para confirmar')+'</span>'
@@ -1147,11 +1167,11 @@ function renderConfirmList(){
   if(guests.length>0){
     h+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--br)">';
     h+='<div style="font-size:.6rem;color:#E040FB;letter-spacing:2px;margin-bottom:5px">🎟️ CONVIDADOS</div>';
-    h+=guests.map(function(name){
+    h+=guests.map(function(g){
       return'<div class="ci conf" style="border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.08)">'
         +'<div class="cck" style="background:rgba(171,71,188,.5);border-color:rgba(171,71,188,.5);color:white">✓</div>'
         +'<span style="font-size:.95rem;flex-shrink:0">🎟️</span>'
-        +'<div style="flex:1"><div class="cname">'+name+'</div><div class="cpos">Convidado</div></div>'
+        +'<div style="flex:1"><div class="cname">'+g.name+'</div><div class="cpos">'+(g.pos||'Convidado')+'</div></div>'
         +'<span style="font-size:.65rem;color:#E040FB">CONVIDADO</span>'
         +'</div>';
     }).join('');
@@ -1190,7 +1210,7 @@ window.compartilharLista=function(){
   var conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
   var today=todayStr();
   var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
-  var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}).map(function(g){return g.name;}):[]; 
+  var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
   var total=conf.length+gameGuests.length;
   if(total===0){showToast('Nenhum confirmado!');return;}
   var dt=document.getElementById('wa-date').value;
@@ -1208,7 +1228,7 @@ window.compartilharLista=function(){
   out.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
   if(gameGuests.length>0){
     msg+=nl+'🎟️ CONVIDADOS ('+gameGuests.length+'):'+nl;
-    gameGuests.forEach(function(name,i){msg+=(i+1)+'. '+name+' (convidado)'+nl;});
+    gameGuests.forEach(function(g,i){msg+=(i+1)+'. '+g.name+(g.pos?' - '+g.pos:'')+' (convidado)'+nl;});
   }
   msg+=nl+'Total: '+total+' confirmado'+(total!==1?'s':'');
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
@@ -1305,6 +1325,11 @@ window.showPage=function(name,btn){
 
 // ===== MODALS =====
 window.openModal=function(name){
+  if(name==='addPlayer'){
+    window._pPhotoData=null;
+    document.querySelectorAll('.pos-chip').forEach(function(b){b.classList.remove('active');});
+    var pi=document.getElementById('p-pos');if(pi)pi.value='';
+  }
   if(name==='addGame'){toggleSF();setTimeout(()=>buildNotasForm(),100);}
   document.getElementById('modal-'+name).classList.add('open');
 };
@@ -1661,6 +1686,17 @@ window.convocarGrupo=function(){
   msg+='👊 Invictos FC - Nunca Rendidos!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
+window.selectPos=function(pos,btn){
+  document.getElementById('p-pos').value=pos;
+  document.querySelectorAll('.pos-chip').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+};
+window.selectGuestPos=function(pos,btn){
+  window._guestPos=pos;
+  document.querySelectorAll('.guest-pos-chip').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+};
+window._guestPos='';
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 async function startListeners(){
