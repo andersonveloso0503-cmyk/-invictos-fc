@@ -256,7 +256,7 @@ setTimeout(function(){
 function chkMn(){
   if(document.getElementById('mn-p').value==='invictos2015'){
     document.getElementById('mn').style.display='none';
-    try{localStorage.setItem('ifc_mn','v4');}catch(e){}
+    try{localStorage.setItem('ifc_mn','v5');}catch(e){}
   }else{
     document.getElementById('mn-e').style.display='block';
     document.getElementById('mn-p').value='';
@@ -266,7 +266,7 @@ function chkMn(){
 document.addEventListener('DOMContentLoaded',function(){
   try{
     document.getElementById('mn-p').addEventListener('keydown',function(e){if(e.key==='Enter')chkMn();});
-    if(localStorage.getItem('ifc_mn')==='v4')document.getElementById('mn').style.display='none';
+    if(localStorage.getItem('ifc_mn')==='v5')document.getElementById('mn').style.display='none';
   }catch(e){}
 });
 </script>
@@ -1791,8 +1791,8 @@ window.confirmPos=async function(pos){
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 async function startListeners(){
-  onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();if(_ready)renderAll();setOnline(true);},()=>setOnline(false));
-  onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();if(_ready)renderAll();}});
+  onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();setOnline(true);},()=>setOnline(false));
+  onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
   onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'guests'),function(snap){
@@ -1817,13 +1817,13 @@ async function init(){
   },3000);
   buildEmoji();loadLocal();
   if(localStorage.getItem('ifc_admin')==='1'){isAdmin=true;}
-  renderAll();updateAdminUI();
+  updateAdminUI();
   document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
   setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash').remove(),800);},2200);
   await startListeners();
   _ready=true;
-  renderAll();
+  renderAll();updateAdminUI();
   setTimeout(function(){seedGames().catch(function(){});},2000);
   // Refresh live status every 30s
   setInterval(()=>renderHome(),30000);
