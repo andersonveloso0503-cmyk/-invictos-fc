@@ -237,38 +237,30 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 <div style="font-size:.7rem;color:#C9A84C;letter-spacing:4px;margin-bottom:22px">EM MANUTENCAO</div>
 <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:16px 20px;max-width:290px;text-align:center;margin-bottom:22px">
 <div style="font-size:.9rem;color:#F5E6C8;font-weight:600;margin-bottom:6px">App em atualizacao</div>
-<div style="font-size:.75rem;color:#9A8060;line-height:1.6">Estamos melhorando o app.<br>Voltamos em breve!</div>
+<div style="font-size:.75rem;color:#9A8060;line-height:1.6">Voltamos em breve!</div>
 </div>
 <input id="mn-p" type="password" placeholder="Senha admin" style="background:rgba(255,255,255,.05);border:1px solid rgba(201,168,76,.3);border-radius:8px;padding:11px 16px;color:#F5E6C8;font-size:1rem;text-align:center;outline:none;width:200px;margin-bottom:10px;display:block;letter-spacing:3px">
-<button onclick="chkMn()" style="background:linear-gradient(135deg,#8B1A1A,#5C0E0E);border:1px solid #C9A84C;border-radius:8px;padding:11px 28px;color:#F0C040;font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:2px;cursor:pointer">ENTRAR</button>
+<button onclick="chkMn()" style="background:linear-gradient(135deg,#8B1A1A,#5C0E0E);border:1px solid #C9A84C;border-radius:8px;padding:11px 28px;color:#F0C040;font-family:'Cinzel',serif;font-size:.85rem;letter-spacing:2px;cursor:pointer">ENTRAR</button>
 <div id="mn-e" style="font-size:.7rem;color:#F87171;margin-top:8px;display:none">Senha incorreta</div>
 </div>
 <script>
-// Splash garantida - roda ANTES do modulo Firebase
+// Splash some em 2s - independente de qualquer erro
 setTimeout(function(){
-  try{
-    var s=document.getElementById('splash');
-    if(s){s.classList.add('hide');setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},600);}
-  }catch(e){}
-},1800);
-
+  try{var s=document.getElementById('splash');if(s){s.classList.add('hide');setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s);},600);}}catch(e){}
+},2000);
 // Manutencao
 function chkMn(){
   if(document.getElementById('mn-p').value==='invictos2015'){
     document.getElementById('mn').style.display='none';
-    try{localStorage.setItem('ifc_mn','v5');}catch(e){}
+    try{localStorage.setItem('ifc_mn','v6');}catch(e){}
   }else{
     document.getElementById('mn-e').style.display='block';
     document.getElementById('mn-p').value='';
     setTimeout(function(){document.getElementById('mn-e').style.display='none';},2000);
   }
 }
-document.addEventListener('DOMContentLoaded',function(){
-  try{
-    document.getElementById('mn-p').addEventListener('keydown',function(e){if(e.key==='Enter')chkMn();});
-    if(localStorage.getItem('ifc_mn')==='v5')document.getElementById('mn').style.display='none';
-  }catch(e){}
-});
+document.getElementById('mn-p').addEventListener('keydown',function(e){if(e.key==='Enter')chkMn();});
+try{if(localStorage.getItem('ifc_mn')==='v6')document.getElementById('mn').style.display='none';}catch(e){}
 </script>
 
 
@@ -583,7 +575,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <button class="btn-can" style="margin-top:8px" onclick="closeModal('changePos')">CANCELAR</button>
   </div>
 </div>
-<script type="module">    var confHtml=totalConf>0?'<div class="ng-conf"><span class="ng-conf-count">'+totalConf+'</span> confirmado'+(totalConf!==1?'s':'')+(guestCount>0?' <span style="font-size:.6rem;color:#E040FB">(+'+guestCount+')</span>':'')+'</div>':'';
+<script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -634,7 +626,6 @@ document.getElementById('adminModalBg').addEventListener('click',e=>{if(e.target
 document.getElementById('adminPassInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkAdminPass();});
 
 // ===== CACHE =====
-var _ready=false;
 let cache={games:[],players:[],confirmed:[],absent:[],teamPhotos:TEAM_PHOTOS,confrats:[]};
 
 function saveLocal(){localStorage.setItem('ifc_cache',JSON.stringify({games:cache.games,players:cache.players,confirmed:cache.confirmed,absent:cache.absent}));}
@@ -1817,19 +1808,19 @@ async function init(){
   },3000);
   buildEmoji();loadLocal();
   if(localStorage.getItem('ifc_admin')==='1'){isAdmin=true;}
-  updateAdminUI();
+  renderAll();updateAdminUI();
   document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
   setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash').remove(),800);},2200);
   await startListeners();
-  _ready=true;
-  renderAll();updateAdminUI();
   setTimeout(function(){seedGames().catch(function(){});},2000);
   // Refresh live status every 30s
   setInterval(()=>renderHome(),30000);
 }
 
-init();</script>
+init();
+</script>
+
 
 <div id="ifc-photos" style="display:none"></div>
 </body>
