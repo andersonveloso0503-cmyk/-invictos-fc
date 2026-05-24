@@ -549,6 +549,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 
 
 
+
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -869,6 +870,47 @@ window.saveGameLocation=async function(id){
     await setDoc(doc(db,'games',id),{...g,location:loc,address:addr});
     showToast('Local salvo! 📍');
     setTimeout(()=>openGameDetail(id),400);
+  }catch(e){showToast('Erro!');}
+  showSync(false);
+};
+window.cancelarJogo=async function(id){
+  if(!isAdmin)return;
+  if(!confirm('Cancelar este jogo?'))return;
+  const g=cache.games.find(x=>x.id===id);if(!g)return;
+  showSync(true);
+  try{
+    await setDoc(doc(db,'games',id),Object.assign({},g,{status:'cancelado'}));
+    await limparConfSilent();
+    closeModal('gameDetail');
+    showToast('Jogo cancelado!');
+    setTimeout(function(){
+      if(confirm('Avisar jogadores pelo WhatsApp?'))enviarCancelamentoWA(g);
+    },400);
+  }catch(e){showToast('Erro ao cancelar!');}
+  showSync(false);
+};
+window.enviarCancelamentoWA=function(g){
+  var nl='\n';
+  var p=g.date?g.date.split('-'):[];
+  var data=p.length?p[2]+'/'+p[1]+'/'+p[0]:'';
+  var msg='JOGO CANCELADO - INVICTOS FC'+nl+nl;
+  msg+='O jogo contra '+g.opponent+' foi cancelado.'+nl;
+  if(data)msg+='Data: '+data+nl;
+  if(g.time)msg+='Horario: '+g.time+'h'+nl;
+  if(g.location)msg+='Local: '+g.location+nl;
+  msg+=nl+'Fiquem atentos para novos avisos!'+nl;
+  msg+='Invictos FC - Nunca Rendidos!';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+};
+window.saveMvp=async function(gid){
+  const sel=document.getElementById('mvp-sel');if(!sel)return;
+  const mvp=sel.value;if(!mvp)return;
+  const g=cache.games.find(x=>x.id===gid);if(!g)return;
+  showSync(true);
+  try{
+    await setDoc(doc(db,'games',gid),Object.assign({},g,{mvp:mvp}));
+    showToast('MVP: '+mvp+' salvo!');
+    openGameDetail(gid);
   }catch(e){showToast('Erro!');}
   showSync(false);
 };
@@ -1842,7 +1884,9 @@ init();
 
 
 
+
 </script>
+
 
 
 
