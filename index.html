@@ -552,6 +552,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 
 
 
+
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -975,7 +976,10 @@ function gameCardHTML(g,showDel=true){
   const st=getGameStatus(g);
   const[label,cls]=statusLabel(st);
   const fin=g.status!=='agendado';
-  var h='<div class="gc" data-gid="'+g.id+'" onclick="openGameDetail(this.dataset.gid)" style="cursor:pointer">';
+  var cancelOverlay=g.status==='cancelado'?'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none"><div style="font-size:5rem;font-weight:900;color:rgba(239,68,68,.85);text-shadow:0 0 20px rgba(239,68,68,.5);line-height:1">&#10060;</div></div>':'';
+  var cancelStyle=g.status==='cancelado'?'opacity:.6;filter:grayscale(.4);':'';
+  var h='<div class="gc" data-gid="'+g.id+'" onclick="openGameDetail(this.dataset.gid)" style="cursor:pointer;position:relative;overflow:hidden;'+cancelStyle+'">';
+  h+=cancelOverlay;
   h+='<div class="gh"><div class="gd2">📅 '+fmtDate(g.date)+(g.time?' · '+g.time:'')+'</div><div class="gs '+cls+'">'+label+'</div></div>';
   h+='<div class="gsr"><div class="gt">Invictos FC</div><div class="gsc">'+(fin?g.goalsUs+'<span>×</span>'+g.goalsThem:'<span style="font-size:.85rem">VS</span>')+'</div><div class="gt r">'+g.opponent+'</div></div>';
   if(g.location)h+='<div class="ginf">📍 '+g.location+'</div>';
@@ -1900,7 +1904,9 @@ init();
 
 
 
+
 </script>
+
 
 
 
