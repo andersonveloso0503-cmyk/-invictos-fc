@@ -547,6 +547,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 </div>
 <script type="module">
 
+
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -734,6 +735,7 @@ window.openGameDetail=function(id){window._currentGameId=id;
           </select>
         </div>
         <button class="btn-sub" onclick="saveGameDetail('${id}')">💾 SALVAR</button>
+      <button class="btn-can" style="color:#F87171;border-color:rgba(239,68,68,.3);margin-top:5px" onclick="cancelarJogo('${id}')">❌ CANCELAR JOGO</button>
       </div>`;
   }else if(isPast){
     const[sl,sc]=statusLabel(g.status);
@@ -1231,6 +1233,14 @@ window.toggleConf=async function(pid){
   }catch(e){showToast('Erro!');}
 };
 
+window.limparConfSilent=async function(){
+  try{
+    const b=writeBatch(db);
+    cache.confirmed.forEach(id=>b.delete(doc(db,'confirmed',id)));
+    cache.absent.forEach(id=>b.delete(doc(db,'absent',id)));
+    await b.commit();
+  }catch(e){}
+};
 window.limparConf=async function(){
   if(!confirm('Limpar lista?'))return;
   const b=writeBatch(db);
@@ -1753,7 +1763,20 @@ window.confirmPos=async function(pos){
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 async function startListeners(){
-  onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();setOnline(true);},()=>setOnline(false));
+  onSnapshot(collection(db,'games'),snap=>{var oldNextId=cache.games.filter(g=>g.status==='agendado'&&g.date>=todayStr()).sort((a,b)=>new Date(a.date)-new Date(b.date))[0]?.id||null;
+    cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));
+    var newNextId=cache.games.filter(g=>g.status==='agendado'&&g.date>=todayStr()).sort((a,b)=>new Date(a.date)-new Date(b.date))[0]?.id||null;
+    // Auto-clear confirmados when next game changes
+    if(oldNextId&&newNextId&&oldNextId!==newNextId){
+      var savedGame=localStorage.getItem('ifc_last_game');
+      if(savedGame!==newNextId){
+        localStorage.setItem('ifc_last_game',newNextId);
+        limparConfSilent();
+      }
+    } else if(newNextId&&!localStorage.getItem('ifc_last_game')){
+      localStorage.setItem('ifc_last_game',newNextId);
+    }
+    saveLocal();renderAll();setOnline(true);},()=>setOnline(false));
   onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
   onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
@@ -1791,7 +1814,9 @@ async function init(){
 
 init();
 
+
 </script>
+
 
 
 
