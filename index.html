@@ -548,6 +548,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 <script type="module">
 
 
+
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -1810,12 +1811,39 @@ async function init(){
   setTimeout(function(){seedGames().catch(function(){});},2000);
   // Refresh live status every 30s
   setInterval(()=>renderHome(),30000);
+  // Check for app updates every 5 minutes
+  setInterval(function(){
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if(reg)reg.update();
+      });
+    }
+  },300000);
+  // Service Worker para auto-atualização
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      reg.addEventListener('updatefound',function(){
+        var newSW=reg.installing;
+        newSW.addEventListener('statechange',function(){
+          if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+            showToast('Nova versão disponível! Recarregando...');
+            setTimeout(function(){
+              newSW.postMessage('SKIP_WAITING');
+              window.location.reload();
+            },2000);
+          }
+        });
+      });
+    }).catch(function(e){console.log('SW error:',e);});
+  }
 }
 
 init();
 
 
+
 </script>
+
 
 
 
