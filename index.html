@@ -550,6 +550,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 
 
 
+
+
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -761,7 +763,12 @@ window.openGameDetail=function(id){window._currentGameId=id;
     <div class="mt2" style="margin-bottom:8px">⚽ ${g.opponent} · ${fmtDate(g.date)}</div>
     <div style="background:var(--s2);border:1px solid var(--br);border-radius:9px;padding:10px;margin-bottom:10px">
       <div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:5px">📍 LOCAL DO JOGO</div>
-      ${isAdmin?'<div><input class="fi" id="gd-loc" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px"><input class="fi" id="gd-addr" value="'+(g.address||'')+'" placeholder="Endereço (ex: Rua X 100, Viamão)"><button class="btn-sub" style="margin-top:6px;padding:8px" data-gid="'+id+'" onclick="saveGameLocation(this.dataset.gid)">💾 SALVAR</button></div>'
+      ${isAdmin?'<div>'
+      +'<div style="display:flex;gap:6px;margin-bottom:5px">'
+      +'<input class="fi" id="gd-date" value="'+(g.date||'')+'" type="date" style="flex:1">'
+      +'<input class="fi" id="gd-time" value="'+(g.time||'')+'" type="time" style="width:110px">'
+      +'</div>'
+      +'<input class="fi" id="gd-loc" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px"><input class="fi" id="gd-addr" value="'+(g.address||'')+'" placeholder="Endereço (ex: Rua X 100, Viamão)"><button class="btn-sub" style="margin-top:6px;padding:8px" data-gid="'+id+'" onclick="saveGameLocation(this.dataset.gid)">💾 SALVAR</button></div>'
       :'<div>'+(g.location?'<div style="font-weight:700">'+g.location+'</div>':'')+(g.address?'<div style="font-size:.72rem;color:var(--tm)">'+g.address+'</div><a href="https://maps.google.com/?q='+encodeURIComponent(g.address||'')+'" target="_blank" style="font-size:.7rem;color:#4285F4">🗺️ Ver no Google Maps</a>':'')+((!g.location&&!g.address)?'<div style="font-size:.72rem;color:var(--tm)">Nenhum local informado</div>':'')+'</div>'}
     </div>
     ${scoreHTML}
@@ -867,8 +874,13 @@ window.saveGameLocation=async function(id){
   const g=cache.games.find(x=>x.id===id);if(!g)return;
   showSync(true);
   try{
-    await setDoc(doc(db,'games',id),{...g,location:loc,address:addr});
-    showToast('Local salvo! 📍');
+    const dateVal=document.getElementById('gd-date')?document.getElementById('gd-date').value:'';
+    const timeVal=document.getElementById('gd-time')?document.getElementById('gd-time').value:'';
+    const updates=Object.assign({},g,{location:loc,address:addr});
+    if(dateVal)updates.date=dateVal;
+    if(timeVal!==undefined)updates.time=timeVal;
+    await setDoc(doc(db,'games',id),updates);
+    showToast('Salvo! 📍');
     setTimeout(()=>openGameDetail(id),400);
   }catch(e){showToast('Erro!');}
   showSync(false);
@@ -1847,6 +1859,7 @@ async function init(){
   if(localStorage.getItem('ifc_admin')==='1'){isAdmin=true;}
   renderAll();updateAdminUI();
   document.getElementById('g-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('g-time').value='';
   document.getElementById('cf-date').value=new Date().toISOString().split('T')[0];
   setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash').remove(),800);},2200);
   await startListeners();
@@ -1885,7 +1898,11 @@ init();
 
 
 
+
+
 </script>
+
+
 
 
 
