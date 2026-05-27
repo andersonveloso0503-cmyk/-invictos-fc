@@ -253,9 +253,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   <div class="hbts">
     <button class="hsync" id="syncStatus" onclick="forcSync()">● OFFLINE</button>
     <button class="hsync" id="notifBtn" onclick="toggleNotifications()" title="Ativar notificações">🔔</button>
-    <button class="hadm" onclick="showPage('confrat',null)" style="border-color:rgba(171,71,188,.4);color:#E040FB">🎉</button>
-    <button class="hadm" onclick="showPage('notas',null)" style="color:var(--g)">⭐</button>
-    <button class="hadm admin-only" onclick="openPushModal()" style="color:#FACC15;border-color:rgba(250,204,21,.3)">🔔</button>
+    <button class="hadm admin-only" onclick="openPushModal()" style="color:#FACC15;border-color:rgba(250,204,21,.3)">📢</button>
     <button class="hadm" id="adminBtn" onclick="openAdminModal()">🔒 ADMIN</button>
   </div>
 </header>
@@ -707,7 +705,7 @@ document.getElementById('adminModalBg').addEventListener('click',e=>{if(e.target
 document.getElementById('adminPassInput').addEventListener('keydown',e=>{if(e.key==='Enter')checkAdminPass();});
 
 // ===== CACHE =====
-let cache={games:[],players:[],confirmed:[],absent:[],teamPhotos:TEAM_PHOTOS,confrats:[],pagamentos:[],debitos:[]};
+let cache={games:[],players:[],confirmed:[],absent:[],teamPhotos:TEAM_PHOTOS,confrats:[]};
 
 function saveLocal(){localStorage.setItem('ifc_cache',JSON.stringify({games:cache.games,players:cache.players,confirmed:cache.confirmed,absent:cache.absent}));}
 function loadLocal(){const d=localStorage.getItem('ifc_cache');if(d){const p=JSON.parse(d);cache.games=p.games||[];cache.players=p.players||[];cache.confirmed=p.confirmed||[];cache.absent=p.absent||[];}}
@@ -1430,12 +1428,10 @@ function renderConfirmList(){
     var cls=isConf?'conf':isAbsent?'absent':'';
     var ck=isConf?'✓':isAbsent?'✕':'';
     var badge=isConf?'<span style="font-size:.65rem;color:#4ADE80">✅ CONFIRMADO</span>':isAbsent?'<span style="font-size:.65rem;color:#F87171">❌ AUSENTE</span>':'';
-    var deve=temDebito(p.id);
-    var deveTag=deve?'<span style="font-size:.58rem;background:rgba(248,113,113,.2);color:#F87171;border:1px solid rgba(248,113,113,.4);border-radius:10px;padding:1px 5px;margin-left:3px">⚠️ DEVE</span>':'';
-    var fn=isLive?'':(deve?'alertaDebito(\''+p.id+'\')':'toggleConf(\''+p.id+'\')');
+    var fn=isLive?'':'toggleConf(\''+p.id+'\')';
     return'<div class="ci '+cls+'" onclick="'+fn+'" style="'+(isLive?'cursor:default;':'')+'">'+
       '<div class="cck">'+ck+'</div>'+av+
-      '<div style="flex:1"><div class="cname" style="display:flex;align-items:center;flex-wrap:wrap;gap:2px">'+(p.nick||p.name)+deveTag+'</div><div class="cpos">'+(p.pos||'—')+'</div></div>'+
+      '<div style="flex:1"><div class="cname">'+(p.nick||p.name)+'</div><div class="cpos">'+(p.pos||'—')+'</div></div>'+
       badge+'</div>';
   }).join('');
   // Add guests to the list
@@ -1454,13 +1450,6 @@ function renderConfirmList(){
   }
   el.innerHTML=h;
 }
-
-window.alertaDebito=function(pid){
-  var p=(cache.players||[]).find(function(x){return x.id===pid;});
-  var nome=p?p.nick||p.name:'Jogador';
-  var msg='⚠️ REGULARIZE SEU DÉBITO\n\nOlá, '+nome+'!\nVocê possui pagamento(s) pendente(s) com o Invictos FC.\n\nRegularize seu débito para continuar participando.\n\n💠 PIX: '+PIX_KEY;
-  alert(msg);
-};
 
 window.toggleConf=async function(pid){
   const isConf=cache.confirmed.includes(pid);
@@ -2011,19 +2000,20 @@ window.confirmPos=async function(pos){
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 // ===== PAGAMENTOS =====
+var _pagamentos={};
 var PIX_KEY='ddc238a6-7ac5-4cb0-8c83-76287e78bada';
 
 function initPixQR(){
   var qrEl=document.getElementById('pix-qr');
-  if(qrEl&&!qrEl.getAttribute('data-loaded')){
+  if(qrEl&&!qrEl.src){
     qrEl.src='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent(PIX_KEY)+'&bgcolor=ffffff&color=000000&margin=1';
-    qrEl.setAttribute('data-loaded','1');
   }
 }
 
 window.copiarPix=function(){
-  if(navigator.clipboard){navigator.clipboard.writeText(PIX_KEY).then(function(){showToast('Chave PIX copiada! 📋');}).catch(function(){_copiarPixFallback();});}
-  else{_copiarPixFallback();}
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(PIX_KEY).then(function(){showToast('Chave PIX copiada! 📋');}).catch(function(){_copiarPixFallback();});
+  }else{_copiarPixFallback();}
 };
 function _copiarPixFallback(){
   var el=document.createElement('textarea');el.value=PIX_KEY;el.style.position='fixed';el.style.opacity='0';document.body.appendChild(el);el.select();
@@ -2031,52 +2021,34 @@ function _copiarPixFallback(){
   document.body.removeChild(el);
 }
 
-function getPagKey(gameId,playerId){return gameId+'_'+playerId;}
-function isPago(gameId,playerId){var key=getPagKey(gameId,playerId);return !!(cache.pagamentos||[]).find(function(p){return p.id===key;});}
-function temDebito(playerId){return !!(cache.debitos||[]).find(function(d){return d.id===playerId;});}
-
-window.togglePagamento=async function(gameId,playerId){
-  if(!isAdmin){showToast('Apenas o admin pode marcar pagamentos');return;}
-  var key=getPagKey(gameId,playerId);
-  var jaExiste=isPago(gameId,playerId);
-  showSync(true);
-  try{
-    if(jaExiste){await deleteDoc(doc(db,'pagamentos',key));showToast('Pagamento removido');}
-    else{await setDoc(doc(db,'pagamentos',key),{gameId:gameId,playerId:playerId,paidAt:new Date().toISOString()});showToast('✅ Pago registrado!');}
-  }catch(e){showToast('Erro ao salvar!');}
-  showSync(false);
-};
-
-window.toggleDebito=async function(playerId){
-  if(!isAdmin){showToast('Apenas o admin pode marcar débitos');return;}
-  var temDeb=temDebito(playerId);
-  showSync(true);
-  try{
-    if(temDeb){await deleteDoc(doc(db,'debitos',playerId));showToast('Débito removido ✅');}
-    else{await setDoc(doc(db,'debitos',playerId),{playerId:playerId,since:new Date().toISOString()});showToast('⚠️ Débito registrado!');}
-  }catch(e){showToast('Erro!');}
-  showSync(false);
-};
-
 function renderPagamentos(){
   initPixQR();
   var el=document.getElementById('pag-list');if(!el)return;
   var today=todayStr();
-  var nextGame=(cache.games||[]).filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
   var valor=parseFloat(document.getElementById('pag-valor')?document.getElementById('pag-valor').value:'')||0;
   var infoEl=document.getElementById('pag-game-info');
   var subEl=document.getElementById('pag-game-sub');
   if(infoEl){
-    if(nextGame){infoEl.textContent='Invictos FC vs '+(nextGame.opponent||'?');if(subEl)subEl.textContent=(nextGame.date?'📅 '+fmtDate(nextGame.date):'')+(nextGame.time?' · 🕐 '+nextGame.time:'')+(nextGame.location?' · 📍 '+nextGame.location:'');}
-    else{infoEl.textContent='Nenhum jogo agendado';if(subEl)subEl.textContent='';}
+    if(nextGame){
+      infoEl.textContent='Invictos FC vs '+(nextGame.opponent||'?');
+      if(subEl)subEl.textContent=(nextGame.date?'📅 '+fmtDate(nextGame.date):'')+(nextGame.time?' · 🕐 '+nextGame.time:'')+(nextGame.location?' · 📍 '+nextGame.location:'');
+    }else{
+      infoEl.textContent='Nenhum jogo agendado';
+      if(subEl)subEl.textContent='';
+    }
   }
-  var pixHint=document.getElementById('pix-valor-hint');var pixValShow=document.getElementById('pix-val-show');
-  if(pixHint&&pixValShow){if(valor>0){pixHint.style.display='block';pixValShow.textContent='R$ '+valor.toFixed(2).replace('.',',');}else{pixHint.style.display='none';}}
-  var confirmedPlayers=(cache.players||[]).filter(function(p){return (cache.confirmed||[]).includes(p.id);});
+  // Atualiza dica de valor no card PIX
+  var pixHint=document.getElementById('pix-valor-hint');
+  var pixValShow=document.getElementById('pix-val-show');
+  if(pixHint&&pixValShow){
+    if(valor>0){pixHint.style.display='block';pixValShow.textContent='R$ '+valor.toFixed(2).replace('.',',');}
+    else{pixHint.style.display='none';}
+  }
+  var confirmedPlayers=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
   var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
-  var gameId=nextGame?nextGame.id:'';
   var total=confirmedPlayers.length+gameGuests.length;
-  var pagaram=confirmedPlayers.filter(function(p){return isPago(gameId,p.id);}).length+gameGuests.filter(function(g){return isPago(gameId,'guest_'+g.id);}).length;
+  var pagaram=confirmedPlayers.filter(function(p){return _pagamentos[p.id];}).length+gameGuests.filter(function(g){return _pagamentos['guest_'+g.id];}).length;
   var faltam=total-pagaram;
   document.getElementById('pag-num-pago').textContent=pagaram;
   document.getElementById('pag-num-falta').textContent=faltam;
@@ -2087,46 +2059,36 @@ function renderPagamentos(){
   if(confirmedPlayers.length>0){
     h+='<div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:6px">⚽ JOGADORES ('+confirmedPlayers.length+')</div>';
     h+=confirmedPlayers.map(function(p){
-      var pago=isPago(gameId,p.id);
-      var deve=temDebito(p.id);
+      var pago=!!_pagamentos[p.id];
       var av=p.photo?'<img src="'+p.photo+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0">':'<span style="font-size:1.1rem;flex-shrink:0">'+(p.emoji||'⚽')+'</span>';
       var valBadge=valor?'<span style="font-size:.72rem;'+(pago?'color:#4ADE80;font-weight:700':'color:var(--tm)')+'">R$ '+valor.toFixed(2).replace('.',',')+'</span>':'';
-      var deveTag=deve&&!pago?'<span style="font-size:.58rem;background:rgba(248,113,113,.2);color:#F87171;border:1px solid rgba(248,113,113,.4);border-radius:10px;padding:1px 5px;margin-left:3px">DEVE</span>':'';
-      var debBtn=isAdmin?'<button onclick="event.stopPropagation();toggleDebito(\''+p.id+'\')" style="background:none;border:none;cursor:pointer;font-size:.85rem;padding:2px 4px">'+(deve?'🔴':'⚪')+'</button>':'';
-      return'<div class="pag-row '+(pago?'pago':'')+'" onclick="togglePagamento(\''+gameId+'\',\''+p.id+'\')">'+av+'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:.88rem;display:flex;align-items:center;gap:2px;flex-wrap:wrap">'+(p.nick||p.name)+deveTag+'</div><div style="font-size:.6rem;color:var(--tm)">'+(p.pos||'—')+'</div></div>'+debBtn+valBadge+'<div class="pag-check '+(pago?'ok':'')+'">'+(pago?'✅':'⭕')+'</div></div>';
+      return'<div class="pag-row '+(pago?'pago':'')+'" onclick="togglePagamento(\''+p.id+'\')">'
+        +av+'<div style="flex:1"><div style="font-weight:700;font-size:.88rem">'+(p.nick||p.name)+'</div><div style="font-size:.6rem;color:var(--tm)">'+(p.pos||'—')+'</div></div>'
+        +valBadge+'<div class="pag-check '+(pago?'ok':'')+'">'+(pago?'✅':'⭕')+'</div></div>';
     }).join('');
   }
   if(gameGuests.length>0){
     h+='<div style="font-size:.6rem;color:#E040FB;letter-spacing:2px;margin:10px 0 6px">🎟️ CONVIDADOS ('+gameGuests.length+')</div>';
     h+=gameGuests.map(function(g){
-      var key='guest_'+g.id;var pago=isPago(gameId,key);
+      var key='guest_'+g.id;var pago=!!_pagamentos[key];
       var valBadge=valor?'<span style="font-size:.72rem;'+(pago?'color:#4ADE80;font-weight:700':'color:var(--tm)')+'">R$ '+valor.toFixed(2).replace('.',',')+'</span>':'';
-      return'<div class="pag-row '+(pago?'pago':'')+'" onclick="togglePagamento(\''+gameId+'\',\''+key+'\')"><span style="font-size:1.1rem;flex-shrink:0">🎟️</span><div style="flex:1"><div style="font-weight:700;font-size:.88rem">'+g.name+'</div><div style="font-size:.6rem;color:#E040FB">Convidado</div></div>'+valBadge+'<div class="pag-check '+(pago?'ok':'')+'">'+(pago?'✅':'⭕')+'</div></div>';
+      return'<div class="pag-row '+(pago?'pago':'')+'" onclick="togglePagamento(\''+key+'\')"><span style="font-size:1.1rem;flex-shrink:0">🎟️</span><div style="flex:1"><div style="font-weight:700;font-size:.88rem">'+g.name+'</div><div style="font-size:.6rem;color:#E040FB">Convidado</div></div>'+valBadge+'<div class="pag-check '+(pago?'ok':'')+'">'+(pago?'✅':'⭕')+'</div></div>';
     }).join('');
   }
   el.innerHTML=h;
 }
-window.limparPagamentos=async function(){
-  if(!isAdmin){showToast('Apenas o admin pode limpar');return;}
-  if(!confirm('Limpar todos os pagamentos deste jogo?'))return;
-  var today=todayStr();
-  var nextGame=(cache.games||[]).filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
-  if(!nextGame)return;
-  showSync(true);
-  try{var toDelete=(cache.pagamentos||[]).filter(function(p){return p.gameId===nextGame.id;});for(var i=0;i<toDelete.length;i++){await deleteDoc(doc(db,'pagamentos',toDelete[i].id));}showToast('Pagamentos limpos!');}catch(e){showToast('Erro!');}
-  showSync(false);
-};
+window.togglePagamento=function(id){_pagamentos[id]=!_pagamentos[id];renderPagamentos();};
+window.limparPagamentos=function(){if(!confirm('Limpar todos os pagamentos?'))return;_pagamentos={};renderPagamentos();showToast('Pagamentos limpos!');};
 window.compartilharPagamentosWA=function(){
   var today=todayStr();
-  var nextGame=(cache.games||[]).filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
   var valor=parseFloat(document.getElementById('pag-valor').value)||0;
-  var confirmedPlayers=(cache.players||[]).filter(function(p){return (cache.confirmed||[]).includes(p.id);});
+  var confirmedPlayers=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
   var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
-  var gameId=nextGame?nextGame.id:'';
-  var pagaram=confirmedPlayers.filter(function(p){return isPago(gameId,p.id);});
-  var pagaramGuests=gameGuests.filter(function(g){return isPago(gameId,'guest_'+g.id);});
-  var faltamPagar=confirmedPlayers.filter(function(p){return !isPago(gameId,p.id);});
-  var faltamGuests=gameGuests.filter(function(g){return !isPago(gameId,'guest_'+g.id);});
+  var pagaram=confirmedPlayers.filter(function(p){return _pagamentos[p.id];});
+  var pagaramGuests=gameGuests.filter(function(g){return _pagamentos['guest_'+g.id];});
+  var faltamPagar=confirmedPlayers.filter(function(p){return !_pagamentos[p.id];});
+  var faltamGuests=gameGuests.filter(function(g){return !_pagamentos['guest_'+g.id];});
   var nl='\n';var msg='💰 *PAGAMENTOS - INVICTOS FC*'+nl;
   if(nextGame)msg+='📅 '+fmtDate(nextGame.date)+(nextGame.time?' · '+nextGame.time:'')+(nextGame.opponent?' · vs '+nextGame.opponent:'')+nl;
   if(valor)msg+='💵 Valor: R$ '+valor.toFixed(2).replace('.',',')+' por jogador'+nl;
@@ -2138,6 +2100,7 @@ window.compartilharPagamentosWA=function(){
   msg+=nl+'🦁 Invictos FC — Nunca Rendidos!'+nl+'💠 PIX: '+PIX_KEY;
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
+
 async function startListeners(){
   onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();setOnline(true);},()=>setOnline(false));
   onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
@@ -2152,8 +2115,6 @@ async function startListeners(){
     }
   });
   onSnapshot(collection(db,'confrats'),snap=>{cache.confrats=snap.docs.map(d=>({id:d.id,...d.data()}));renderConfratList();});
-  onSnapshot(collection(db,'pagamentos'),snap=>{cache.pagamentos=snap.docs.map(d=>({id:d.id,...d.data()}));renderPagamentos();});
-  onSnapshot(collection(db,'debitos'),snap=>{cache.debitos=snap.docs.map(d=>({id:d.id,...d.data()}));renderConfirmList();});
 }
 
 // ===== INIT =====
