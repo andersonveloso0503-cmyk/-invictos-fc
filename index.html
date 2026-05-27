@@ -394,8 +394,11 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   <div class="sh"><h2>💰 PAGAMENTOS</h2><div class="sl"></div></div>
 
   <!-- Info do jogo -->
-  <div id="pag-game-info" style="font-size:.72rem;color:var(--tm);text-align:center;padding:8px 11px;background:var(--s2);border-radius:8px;border:1px solid var(--br);margin-bottom:11px">
-    Lista gerada a partir dos confirmados no próximo jogo
+  <div style="background:linear-gradient(135deg,rgba(139,26,26,.45),rgba(92,14,14,.35));border:1px solid rgba(139,26,26,.7);border-radius:12px;padding:13px 14px;margin-bottom:12px;position:relative;overflow:hidden">
+    <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cr),var(--gd),var(--cr))"></div>
+    <div style="font-size:.58rem;color:var(--g);letter-spacing:3px;margin-bottom:6px">&#9889; PRÓXIMO JOGO</div>
+    <div id="pag-game-info" style="font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--gb);line-height:1.4">—</div>
+    <div id="pag-game-sub" style="font-size:.72rem;color:var(--tm);margin-top:4px"></div>
   </div>
 
   <!-- PIX + QR Code -->
@@ -2027,7 +2030,16 @@ function renderPagamentos(){
   var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
   var valor=parseFloat(document.getElementById('pag-valor')?document.getElementById('pag-valor').value:'')||0;
   var infoEl=document.getElementById('pag-game-info');
-  if(infoEl&&nextGame){infoEl.textContent='📅 '+fmtDate(nextGame.date)+(nextGame.time?' · '+nextGame.time:'')+(nextGame.opponent?' · vs '+nextGame.opponent:'');}
+  var subEl=document.getElementById('pag-game-sub');
+  if(infoEl){
+    if(nextGame){
+      infoEl.textContent='Invictos FC vs '+(nextGame.opponent||'?');
+      if(subEl)subEl.textContent=(nextGame.date?'📅 '+fmtDate(nextGame.date):'')+(nextGame.time?' · 🕐 '+nextGame.time:'')+(nextGame.location?' · 📍 '+nextGame.location:'');
+    }else{
+      infoEl.textContent='Nenhum jogo agendado';
+      if(subEl)subEl.textContent='';
+    }
+  }
   // Atualiza dica de valor no card PIX
   var pixHint=document.getElementById('pix-valor-hint');
   var pixValShow=document.getElementById('pix-val-show');
