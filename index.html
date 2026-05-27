@@ -37,6 +37,12 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 .nb.active{color:var(--gb)}
 .nb.active .ni{transform:scale(1.15)}
 .nb.active::after{content:'';position:absolute;top:0;left:15%;right:15%;height:2px;background:linear-gradient(90deg,transparent,var(--gb),transparent);border-radius:2px}
+.pag-row{display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--s),var(--s2));border:1px solid var(--br);border-radius:10px;padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:border-color .2s;position:relative;overflow:hidden}
+.pag-row::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cr),var(--gd))}
+.pag-row.pago{border-color:rgba(74,222,128,.5);background:linear-gradient(135deg,rgba(74,222,128,.08),rgba(34,197,94,.05))}
+.pag-row.pago::before{background:linear-gradient(90deg,#4ADE80,#22C55E)}
+.pag-check{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--br);background:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem;cursor:pointer;transition:all .2s}
+.pag-check.ok{background:rgba(74,222,128,.2);border-color:rgba(74,222,128,.6)}
 .page{display:none;padding:60px 13px 82px;min-height:100vh}
 .page.active{display:block}
 .sh{display:flex;align-items:center;gap:8px;margin-bottom:11px}
@@ -289,33 +295,32 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div class="sh"><h2>📸 GALERIA DO TIME</h2><div class="sl"></div></div>
     <div class="pgrid" id="teamPhotosGrid"></div>
   </div>
-</div>
-
-<!-- ARTILHARIA -->
-<div id="page-artilharia" class="page">
-  <div class="fr" style="margin-bottom:11px">
-    <button class="fb active" onclick="switchArtTab('art',this)">⚽ Artilh.</button>
-    <button class="fb" onclick="switchArtTab('ass',this)">🎯 Assist.</button>
-    <button class="fb" onclick="switchArtTab('notas',this)">⭐ Notas</button>
-    <button class="fb" onclick="switchArtTab('confrat',this)">🎉 Confrat.</button>
-  </div>
-  <div id="atab-art">
-    <div class="sh"><h2>ARTILHEIROS</h2><div class="sl"></div></div>
-    <div id="scorersList"></div>
-  </div>
-  <div id="atab-ass" style="display:none">
-    <div class="sh"><h2>ASSISTÊNCIAS</h2><div class="sl"></div></div>
-    <div id="assistsList"></div>
-  </div>
-  <div id="atab-notas" style="display:none">
-    <div class="sh"><h2>⭐ RANKING DE NOTAS</h2><div class="sl"></div></div>
-    <div style="font-size:.7rem;color:var(--tm);margin-bottom:11px;padding:9px 11px;background:var(--s2);border-radius:7px;border:1px solid var(--br)">Notas são dadas ao registrar um jogo.</div>
-    <div id="rankingNotas"></div>
-  </div>
-  <div id="atab-confrat" style="display:none">
-    <button class="btn-add admin-only" onclick="openModal('addConfrat')">🎉 + NOVO EVENTO</button>
-    <div class="sh"><h2>🎉 CONFRATERNIZAÇÕES</h2><div class="sl"></div></div>
-    <div id="confratList"></div>
+  <!-- ARTILHARIA DENTRO DO ELENCO -->
+  <div style="margin-top:18px">
+    <div class="fr" style="margin-bottom:11px">
+      <button class="fb active" onclick="switchArtTab('art',this)">⚽ Artilh.</button>
+      <button class="fb" onclick="switchArtTab('ass',this)">🎯 Assist.</button>
+      <button class="fb" onclick="switchArtTab('notas',this)">⭐ Notas</button>
+      <button class="fb" onclick="switchArtTab('confrat',this)">🎉 Confrat.</button>
+    </div>
+    <div id="atab-art">
+      <div class="sh"><h2>ARTILHEIROS</h2><div class="sl"></div></div>
+      <div id="scorersList"></div>
+    </div>
+    <div id="atab-ass" style="display:none">
+      <div class="sh"><h2>ASSISTÊNCIAS</h2><div class="sl"></div></div>
+      <div id="assistsList"></div>
+    </div>
+    <div id="atab-notas" style="display:none">
+      <div class="sh"><h2>⭐ RANKING DE NOTAS</h2><div class="sl"></div></div>
+      <div style="font-size:.7rem;color:var(--tm);margin-bottom:11px;padding:9px 11px;background:var(--s2);border-radius:7px;border:1px solid var(--br)">Notas são dadas ao registrar um jogo.</div>
+      <div id="rankingNotas"></div>
+    </div>
+    <div id="atab-confrat" style="display:none">
+      <button class="btn-add admin-only" onclick="openModal('addConfrat')">🎉 + NOVO EVENTO</button>
+      <div class="sh"><h2>🎉 CONFRATERNIZAÇÕES</h2><div class="sl"></div></div>
+      <div id="confratList"></div>
+    </div>
   </div>
 </div>
 
@@ -384,12 +389,50 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   <div id="topPlayers"></div>
 </div>
 
+<!-- PAGAMENTOS -->
+<div id="page-pagamentos" class="page">
+  <div class="sh"><h2>💰 PAGAMENTOS</h2><div class="sl"></div></div>
+
+  <!-- Info do jogo -->
+  <div id="pag-game-info" style="font-size:.72rem;color:var(--tm);text-align:center;padding:8px 11px;background:var(--s2);border-radius:8px;border:1px solid var(--br);margin-bottom:11px">
+    Lista gerada a partir dos confirmados no próximo jogo
+  </div>
+
+  <!-- Valor por jogador -->
+  <div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;padding:11px 13px">
+    <span style="font-size:.75rem;color:var(--tm);white-space:nowrap">💵 Valor por jogador: R$</span>
+    <input id="pag-valor" type="number" min="0" step="5" placeholder="0,00"
+      style="border:none;background:transparent;font-family:'Cinzel',serif;font-size:1.1rem;font-weight:700;color:var(--gb);width:100%;outline:none"
+      oninput="renderPagamentos()">
+  </div>
+
+  <!-- Resumo -->
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:12px" id="pag-resumo">
+    <div class="sm"><div class="n" style="color:#4ADE80" id="pag-num-pago">0</div><div class="l">Pagaram</div></div>
+    <div class="sm"><div class="n" style="color:#FACC15" id="pag-num-falta">0</div><div class="l">Faltam</div></div>
+    <div class="sm"><div class="n" style="color:#4ADE80;font-size:.95rem" id="pag-total-pago">R$ 0</div><div class="l">Arrecadado</div></div>
+    <div class="sm"><div class="n" style="color:#FACC15;font-size:.95rem" id="pag-total-falta">R$ 0</div><div class="l">A receber</div></div>
+  </div>
+
+  <!-- Lista de jogadores -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
+    <div class="sh" style="margin-bottom:0;flex:1"><h2>LISTA DE PAGAMENTOS</h2><div class="sl"></div></div>
+    <button onclick="limparPagamentos()" style="font-size:.62rem;color:var(--tm);background:none;border:none;cursor:pointer;padding:3px 6px;white-space:nowrap">🔄 limpar</button>
+  </div>
+  <div id="pag-list"></div>
+
+  <!-- Botão WhatsApp -->
+  <div style="margin-top:11px">
+    <button class="btn-wa" onclick="compartilharPagamentosWA()"><span>📲</span> ENVIAR COBRANÇA NO WHATSAPP</button>
+  </div>
+</div>
+
 <nav>
   <button class="nb active" onclick="showPage('home',this)"><div class="ni">🏠</div>Home</button>
   <button class="nb" onclick="showPage('jogos',this)"><div class="ni">⚽</div>Jogos</button>
   <button class="nb" onclick="showPage('elenco',this)"><div class="ni">👥</div>Elenco</button>
-  <button class="nb" onclick="showPage('artilharia',this)"><div class="ni">🎯</div>Artilh.</button>
   <button class="nb" onclick="showPage('whatsapp',this)"><div class="ni">📲</div>WhatsApp</button>
+  <button class="nb" onclick="showPage('pagamentos',this)"><div class="ni">💰</div>Pagtos</button>
 </nav>
 
 <!-- MODALS -->
@@ -672,7 +715,7 @@ function daysUntil(date){
 }
 
 // ===== RENDER ALL =====
-function renderAll(){renderPlayerSelGrid();renderHome();renderGames();renderPlayers();renderScorers();renderTeamStats();renderTeamPhotos();renderRankingNotas();renderConfratList();}
+function renderAll(){renderPlayerSelGrid();renderHome();renderGames();renderPlayers();renderScorers();renderTeamStats();renderTeamPhotos();renderRankingNotas();renderConfratList();renderPagamentos();}
 
 // ===== HOME =====
 function renderHome(){
@@ -1529,6 +1572,7 @@ window.showPage=function(name,btn){
       document.getElementById('wa-opponent').value=next.opponent||'';
     }
   }
+  if(name==='pagamentos'){renderPagamentos();}
 };
 
 // ===== MODALS =====
@@ -1926,6 +1970,71 @@ window.confirmPos=async function(pos){
   showSync(false);
 };
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
+
+// ===== PAGAMENTOS =====
+var _pagamentos={};
+function renderPagamentos(){
+  var el=document.getElementById('pag-list');if(!el)return;
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var valor=parseFloat(document.getElementById('pag-valor')?document.getElementById('pag-valor').value:'')||0;
+  var infoEl=document.getElementById('pag-game-info');
+  if(infoEl&&nextGame){infoEl.textContent='📅 '+fmtDate(nextGame.date)+(nextGame.time?' · '+nextGame.time:'')+(nextGame.opponent?' · vs '+nextGame.opponent:'');}
+  var confirmedPlayers=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
+  var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
+  var total=confirmedPlayers.length+gameGuests.length;
+  var pagaram=confirmedPlayers.filter(function(p){return _pagamentos[p.id];}).length+gameGuests.filter(function(g){return _pagamentos['guest_'+g.id];}).length;
+  var faltam=total-pagaram;
+  document.getElementById('pag-num-pago').textContent=pagaram;
+  document.getElementById('pag-num-falta').textContent=faltam;
+  document.getElementById('pag-total-pago').textContent=valor?'R$ '+(pagaram*valor).toFixed(2).replace('.',','):'—';
+  document.getElementById('pag-total-falta').textContent=valor?'R$ '+(faltam*valor).toFixed(2).replace('.',','):'—';
+  if(total===0){el.innerHTML='<div class="es"><div class="ei">💰</div><p>Nenhum jogador confirmado ainda</p></div>';return;}
+  var h='';
+  if(confirmedPlayers.length>0){
+    h+='<div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:6px">⚽ JOGADORES ('+confirmedPlayers.length+')</div>';
+    h+=confirmedPlayers.map(function(p){
+      var pago=!!_pagamentos[p.id];
+      var av=p.photo?'<img src="'+p.photo+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0">':'<span style="font-size:1.1rem;flex-shrink:0">'+(p.emoji||'⚽')+'</span>';
+      var valBadge=valor?'<span style="font-size:.72rem;'+(pago?'color:#4ADE80;font-weight:700':'color:var(--tm)')+'">R$ '+valor.toFixed(2).replace('.',',')+'</span>':'';
+      return'<div class="pag-row '+(pago?'pago':'')+'" onclick="togglePagamento(\''+p.id+'\')">'
+        +av+'<div style="flex:1"><div style="font-weight:700;font-size:.88rem">'+(p.nick||p.name)+'</div><div style="font-size:.6rem;color:var(--tm)">'+(p.pos||'—')+'</div></div>'
+        +valBadge+'<div class="pag-check '+(pago?'ok':'')+'">'+(pago?'✅':'⭕')+'</div></div>';
+    }).join('');
+  }
+  if(gameGuests.length>0){
+    h+='<div style="font-size:.6rem;color:#E040FB;letter-spacing:2px;margin:10px 0 6px">🎟️ CONVIDADOS ('+gameGuests.length+')</div>';
+    h+=gameGuests.map(function(g){
+      var key='guest_'+g.id;var pago=!!_pagamentos[key];
+      var valBadge=valor?'<span style="font-size:.72rem;'+(pago?'color:#4ADE80;font-weight:700':'color:var(--tm)')+'">R$ '+valor.toFixed(2).replace('.',',')+'</span>':'';
+      return'<div class="pag-row '+(pago?'pago':'')+'" onclick="togglePagamento(\''+key+'\')"><span style="font-size:1.1rem;flex-shrink:0">🎟️</span><div style="flex:1"><div style="font-weight:700;font-size:.88rem">'+g.name+'</div><div style="font-size:.6rem;color:#E040FB">Convidado</div></div>'+valBadge+'<div class="pag-check '+(pago?'ok':'')+'">'+(pago?'✅':'⭕')+'</div></div>';
+    }).join('');
+  }
+  el.innerHTML=h;
+}
+window.togglePagamento=function(id){_pagamentos[id]=!_pagamentos[id];renderPagamentos();};
+window.limparPagamentos=function(){if(!confirm('Limpar todos os pagamentos?'))return;_pagamentos={};renderPagamentos();showToast('Pagamentos limpos!');};
+window.compartilharPagamentosWA=function(){
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var valor=parseFloat(document.getElementById('pag-valor').value)||0;
+  var confirmedPlayers=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
+  var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
+  var pagaram=confirmedPlayers.filter(function(p){return _pagamentos[p.id];});
+  var pagaramGuests=gameGuests.filter(function(g){return _pagamentos['guest_'+g.id];});
+  var faltamPagar=confirmedPlayers.filter(function(p){return !_pagamentos[p.id];});
+  var faltamGuests=gameGuests.filter(function(g){return !_pagamentos['guest_'+g.id];});
+  var nl='\n';var msg='💰 *PAGAMENTOS - INVICTOS FC*'+nl;
+  if(nextGame)msg+='📅 '+fmtDate(nextGame.date)+(nextGame.time?' · '+nextGame.time:'')+(nextGame.opponent?' · vs '+nextGame.opponent:'')+nl;
+  if(valor)msg+='💵 Valor: R$ '+valor.toFixed(2).replace('.',',')+' por jogador'+nl;
+  msg+=nl;
+  var totalPago=pagaram.length+pagaramGuests.length;var totalFalta=faltamPagar.length+faltamGuests.length;
+  if(totalPago>0){msg+='✅ *Pagaram ('+totalPago+'):*'+nl;pagaram.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});pagaramGuests.forEach(function(g,i){msg+=(pagaram.length+i+1)+'. '+g.name+' (conv.)'+nl;});msg+=nl;}
+  if(totalFalta>0){msg+='⏳ *Pendente ('+totalFalta+'):*'+nl;faltamPagar.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+(valor?' — R$ '+valor.toFixed(2).replace('.',','):'')+nl;});faltamGuests.forEach(function(g,i){msg+=(faltamPagar.length+i+1)+'. '+g.name+' (conv.)'+(valor?' — R$ '+valor.toFixed(2).replace('.',','):'')+nl;});msg+=nl;}
+  if(valor){msg+='💰 Arrecadado: R$ '+(totalPago*valor).toFixed(2).replace('.',',')+nl+'🔴 A receber: R$ '+(totalFalta*valor).toFixed(2).replace('.',',')+nl;}
+  msg+=nl+'🦁 Invictos FC — Nunca Rendidos!';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+};
 
 async function startListeners(){
   onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();setOnline(true);},()=>setOnline(false));
