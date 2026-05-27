@@ -398,6 +398,33 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     Lista gerada a partir dos confirmados no próximo jogo
   </div>
 
+  <!-- PIX + QR Code -->
+  <div class="card" style="margin-bottom:11px;padding:13px">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+      <span style="font-size:1rem">💠</span>
+      <span style="font-family:'Cinzel',serif;font-size:.78rem;color:var(--gb);letter-spacing:2px;font-weight:700">CHAVE PIX</span>
+    </div>
+    <div style="display:flex;gap:11px;align-items:center">
+      <!-- QR Code -->
+      <div style="flex-shrink:0;background:#fff;border-radius:8px;padding:5px;width:90px;height:90px;display:flex;align-items:center;justify-content:center">
+        <img id="pix-qr" src="" alt="QR PIX" style="width:80px;height:80px;border-radius:4px" onerror="this.style.display='none';document.getElementById('pix-qr-err').style.display='flex'">
+        <div id="pix-qr-err" style="display:none;width:80px;height:80px;align-items:center;justify-content:center;font-size:.55rem;color:#888;text-align:center">QR indisponível</div>
+      </div>
+      <!-- Info PIX -->
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.58rem;color:var(--tm);letter-spacing:1px;margin-bottom:3px">CHAVE ALEATÓRIA</div>
+        <div id="pix-key-txt" style="font-size:.68rem;color:var(--t);word-break:break-all;line-height:1.4;margin-bottom:8px">ddc238a6-7ac5-4cb0-8c83-76287e78bada</div>
+        <button onclick="copiarPix()" style="display:flex;align-items:center;gap:5px;background:linear-gradient(135deg,var(--crd),var(--cr));border:1px solid var(--gd);border-radius:20px;padding:5px 12px;cursor:pointer;color:var(--gb);font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:1px;font-weight:700">
+          📋 COPIAR CHAVE
+        </button>
+      </div>
+    </div>
+    <!-- Valor sugerido -->
+    <div id="pix-valor-hint" style="display:none;margin-top:10px;padding-top:9px;border-top:1px solid var(--br);font-size:.68rem;color:var(--tm);text-align:center">
+      Valor a pagar: <span id="pix-val-show" style="color:var(--gb);font-family:'Cinzel',serif;font-weight:700"></span>
+    </div>
+  </div>
+
   <!-- Valor por jogador -->
   <div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;padding:11px 13px">
     <span style="font-size:.75rem;color:var(--tm);white-space:nowrap">💵 Valor por jogador: R$</span>
@@ -1572,7 +1599,7 @@ window.showPage=function(name,btn){
       document.getElementById('wa-opponent').value=next.opponent||'';
     }
   }
-  if(name==='pagamentos'){renderPagamentos();}
+  if(name==='pagamentos'){renderPagamentos();initPixQR();}
 };
 
 // ===== MODALS =====
@@ -1973,13 +2000,41 @@ window.forcSync=async function(){showSync(true);try{await seedGames();showToast(
 
 // ===== PAGAMENTOS =====
 var _pagamentos={};
+var PIX_KEY='ddc238a6-7ac5-4cb0-8c83-76287e78bada';
+
+function initPixQR(){
+  var qrEl=document.getElementById('pix-qr');
+  if(qrEl&&!qrEl.src){
+    qrEl.src='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent(PIX_KEY)+'&bgcolor=ffffff&color=000000&margin=1';
+  }
+}
+
+window.copiarPix=function(){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(PIX_KEY).then(function(){showToast('Chave PIX copiada! 📋');}).catch(function(){_copiarPixFallback();});
+  }else{_copiarPixFallback();}
+};
+function _copiarPixFallback(){
+  var el=document.createElement('textarea');el.value=PIX_KEY;el.style.position='fixed';el.style.opacity='0';document.body.appendChild(el);el.select();
+  try{document.execCommand('copy');showToast('Chave PIX copiada! 📋');}catch(e){showToast('Copie: '+PIX_KEY);}
+  document.body.removeChild(el);
+}
+
 function renderPagamentos(){
+  initPixQR();
   var el=document.getElementById('pag-list');if(!el)return;
   var today=todayStr();
   var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
   var valor=parseFloat(document.getElementById('pag-valor')?document.getElementById('pag-valor').value:'')||0;
   var infoEl=document.getElementById('pag-game-info');
   if(infoEl&&nextGame){infoEl.textContent='📅 '+fmtDate(nextGame.date)+(nextGame.time?' · '+nextGame.time:'')+(nextGame.opponent?' · vs '+nextGame.opponent:'');}
+  // Atualiza dica de valor no card PIX
+  var pixHint=document.getElementById('pix-valor-hint');
+  var pixValShow=document.getElementById('pix-val-show');
+  if(pixHint&&pixValShow){
+    if(valor>0){pixHint.style.display='block';pixValShow.textContent='R$ '+valor.toFixed(2).replace('.',',');}
+    else{pixHint.style.display='none';}
+  }
   var confirmedPlayers=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
   var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
   var total=confirmedPlayers.length+gameGuests.length;
@@ -2032,7 +2087,7 @@ window.compartilharPagamentosWA=function(){
   if(totalPago>0){msg+='✅ *Pagaram ('+totalPago+'):*'+nl;pagaram.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});pagaramGuests.forEach(function(g,i){msg+=(pagaram.length+i+1)+'. '+g.name+' (conv.)'+nl;});msg+=nl;}
   if(totalFalta>0){msg+='⏳ *Pendente ('+totalFalta+'):*'+nl;faltamPagar.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+(valor?' — R$ '+valor.toFixed(2).replace('.',','):'')+nl;});faltamGuests.forEach(function(g,i){msg+=(faltamPagar.length+i+1)+'. '+g.name+' (conv.)'+(valor?' — R$ '+valor.toFixed(2).replace('.',','):'')+nl;});msg+=nl;}
   if(valor){msg+='💰 Arrecadado: R$ '+(totalPago*valor).toFixed(2).replace('.',',')+nl+'🔴 A receber: R$ '+(totalFalta*valor).toFixed(2).replace('.',',')+nl;}
-  msg+=nl+'🦁 Invictos FC — Nunca Rendidos!';
+  msg+=nl+'🦁 Invictos FC — Nunca Rendidos!'+nl+'💠 PIX: '+PIX_KEY;
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
