@@ -2226,6 +2226,22 @@ async function startListeners(){
 }
 
 // ===== INIT =====
+async function seedConfirmedLists(){
+  // Seed lista confirmados jogo Treze FC 30/05/2026 (ag003)
+  // Só roda se a coleção estiver vazia
+  var col='confirmed_ag003';
+  var existing=await getDocs(collection(db,col));
+  if(existing.docs.length>0)return;
+  var players=['pl026','pl001','pl002','pl004','pl009','pl013','pl014','pl016','pl017','pl024','pl007'];
+  // pl026=Maicon, pl001=A20, pl002=Nairon, pl004=Victor, pl009=Jean
+  // pl013=Wess, pl014=Zigue, pl016=Benites, pl017=Boni, pl024=Junior, pl007=Davi
+  var b=writeBatch(db);
+  players.forEach(function(id){
+    b.set(doc(db,col,id),{id:id});
+  });
+  await b.commit();
+}
+
 async function init(){
   // Set logos
   ['spl-logo','hl','hero-logo'].forEach(cls=>{document.querySelectorAll('.'+cls).forEach(el=>el.src=LOGO);});
@@ -2243,6 +2259,7 @@ async function init(){
   setTimeout(()=>{document.getElementById('splash').classList.add('hide');setTimeout(()=>document.getElementById('splash').remove(),800);},2200);
   await startListeners();
   setTimeout(function(){seedGames().catch(function(){});},2000);
+  setTimeout(function(){seedConfirmedLists().catch(function(){});},3000);
   // Refresh live status every 30s
   setInterval(()=>renderHome(),30000);
   // Check for app updates every 5 minutes
