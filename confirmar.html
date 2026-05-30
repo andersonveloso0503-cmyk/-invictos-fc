@@ -174,6 +174,10 @@ async function init(){
     if(!snap.exists()){showError('Jogo não encontrado.');return;}
     gameData=snap.data();
 
+    // carrega jogadores
+    const pSnap=await getDoc(doc(db,'players','__list__'));
+    const allSnap=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js").then(m=>m.getDocs(m.collection(db,'players')));
+    // getDocs via dynamic import já importado acima
   }catch(e){}
 
   // Listeners em tempo real
@@ -182,12 +186,12 @@ async function init(){
     renderPage();
   });
 
-  onSnapshot(collection(db,'confirmed'),snap=>{
+  onSnapshot(collection(db,'confirmed_'+gameId),snap=>{
     confirmed=snap.docs.map(d=>d.id);
     updateLista();
   });
 
-  onSnapshot(collection(db,'absent'),snap=>{
+  onSnapshot(collection(db,'absent_'+gameId),snap=>{
     absent=snap.docs.map(d=>d.id);
     updateLista();
   });
@@ -366,8 +370,8 @@ window.confirmar=async function(){
     if(!selectedPlayerId){showToast('Escolha seu nome primeiro!');return;}
     const p=players.find(x=>x.id===selectedPlayerId);if(!p)return;
     try{
-      await deleteDoc(doc(db,'absent',selectedPlayerId));
-      await setDoc(doc(db,'confirmed',selectedPlayerId),{id:selectedPlayerId});
+      await deleteDoc(doc(db,'absent_'+gameId,selectedPlayerId));
+      await setDoc(doc(db,'confirmed_'+gameId,selectedPlayerId),{id:selectedPlayerId});
       showToast('✅ '+(p.nick||p.name)+' confirmado!');
       const confPlayers=players.filter(x=>confirmed.includes(x.id));
       const nomes=confPlayers.map(x=>x.nick||x.name.split(' ')[0]).join(', ');
@@ -412,8 +416,8 @@ window.cancelar=async function(){
     const p=players.find(x=>x.id===selectedPlayerId);if(!p)return;
     if(!confirm('Cancelar presença de '+(p.nick||p.name)+'?'))return;
     try{
-      await deleteDoc(doc(db,'confirmed',selectedPlayerId));
-      await setDoc(doc(db,'absent',selectedPlayerId),{id:selectedPlayerId});
+      await deleteDoc(doc(db,'confirmed_'+gameId,selectedPlayerId));
+      await setDoc(doc(db,'absent_'+gameId,selectedPlayerId),{id:selectedPlayerId});
       showToast('❌ Presença cancelada.');
       const msg=
         '❌ *'+(p.nick||p.name)+' cancelou a presença.*\n\n'+
