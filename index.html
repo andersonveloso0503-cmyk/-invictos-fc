@@ -392,12 +392,14 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 <div id="page-pagamentos" class="page">
   <div class="sh"><h2>💰 PAGAMENTOS</h2><div class="sl"></div></div>
 
-  <!-- Info do jogo -->
+  <!-- Seletor de jogo -->
   <div style="background:linear-gradient(135deg,rgba(139,26,26,.45),rgba(92,14,14,.35));border:1px solid rgba(139,26,26,.7);border-radius:12px;padding:13px 14px;margin-bottom:12px;position:relative;overflow:hidden">
     <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cr),var(--gd),var(--cr))"></div>
-    <div style="font-size:.58rem;color:var(--g);letter-spacing:3px;margin-bottom:6px">&#9889; PRÓXIMO JOGO</div>
-    <div id="pag-game-info" style="font-family:'Cinzel',serif;font-size:1rem;font-weight:700;color:var(--gb);line-height:1.4">—</div>
-    <div id="pag-game-sub" style="font-size:.72rem;color:var(--tm);margin-top:4px"></div>
+    <div style="font-size:.58rem;color:var(--g);letter-spacing:3px;margin-bottom:8px">⚽ JOGO</div>
+    <select id="pag-game-select" onchange="onPagGameChange()" style="width:100%;background:rgba(0,0,0,.4);border:1px solid var(--br);border-radius:8px;color:var(--gb);font-family:'Cinzel',serif;font-size:.82rem;font-weight:700;padding:8px 10px;margin-bottom:6px;cursor:pointer">
+      <option value="">— selecione o jogo —</option>
+    </select>
+    <div id="pag-game-sub" style="font-size:.72rem;color:var(--tm)"></div>
   </div>
 
   <!-- PIX + QR Code -->
@@ -2036,13 +2038,49 @@ window.forcSync=async function(){showSync(true);try{await seedGames();showToast(
 
 // ===== PAGAMENTOS =====
 var _pagamentos={};
+var _pagGameId=null;
+window._pagConfirmados=[]; // jogo atualmente selecionado na aba pagamentos
+
+function _pagCol(){return _pagGameId?'payments_'+_pagGameId:'payments_sem_jogo';}
+
+window.onPagGameChange=function(){
+  var sel=document.getElementById('pag-game-select');
+  _pagGameId=sel?sel.value:'';
+  // Atualiza subtítulo
+  var sub=document.getElementById('pag-game-sub');
+  if(sub&&_pagGameId){
+    var g=cache.games.find(function(x){return x.id===_pagGameId;});
+    if(g)sub.textContent=(g.date?'📅 '+fmtDate(g.date):'')+(g.time?' · 🕐 '+g.time:'')+(g.location?' · 📍 '+g.location:'');
+    else sub.textContent='';
+  }else if(sub){sub.textContent='';}
+  // Cancela listeners antigos
+  if(window._pagUnsubscribe){try{window._pagUnsubscribe();}catch(e){}}
+  if(window._pagConfUnsubscribe){try{window._pagConfUnsubscribe();}catch(e){}}
+  _pagamentos={};
+  window._pagConfirmados=[];
+  if(_pagGameId){
+    // Listener pagamentos do jogo
+    window._pagUnsubscribe=onSnapshot(collection(db,_pagCol()),function(snap){
+      _pagamentos={};
+      snap.docs.forEach(function(d){var dt=d.data();_pagamentos[dt.id]=true;});
+      renderPagamentos();
+    });
+    // Listener confirmados do jogo (confirmed_GAMEID)
+    window._pagConfUnsubscribe=onSnapshot(collection(db,'confirmed_'+_pagGameId),function(snap){
+      window._pagConfirmados=snap.docs.map(function(d){return d.id;});
+      renderPagamentos();
+    });
+  }else{renderPagamentos();}
+};
+
 window.togglePagamento=async function(id){
+  if(!_pagGameId){showToast('Selecione um jogo primeiro!');return;}
+  var col=_pagCol();
+  var docId=id.replace(/[^a-zA-Z0-9_]/g,'_');
   if(_pagamentos[id]){
-    // desmarcar
-    try{ await deleteDoc(doc(db,'payments',id.replace(/[^a-zA-Z0-9_]/g,'_'))); }catch(e){}
+    try{ await deleteDoc(doc(db,col,docId)); }catch(e){}
   }else{
-    // marcar como pago
-    try{ await setDoc(doc(db,'payments',id.replace(/[^a-zA-Z0-9_]/g,'_')),{id,paidAt:Date.now()}); }catch(e){}
+    try{ await setDoc(doc(db,col,docId),{id,paidAt:Date.now()}); }catch(e){}
   }
 };var PIX_KEY='ddc238a6-7ac5-4cb0-8c83-76287e78bada';
 
@@ -2067,20 +2105,31 @@ function _copiarPixFallback(){
 function renderPagamentos(){
   initPixQR();
   var el=document.getElementById('pag-list');if(!el)return;
-  var today=todayStr();
-  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
-  var valor=parseFloat(document.getElementById('pag-valor')?document.getElementById('pag-valor').value:'')||0;
-  var infoEl=document.getElementById('pag-game-info');
-  var subEl=document.getElementById('pag-game-sub');
-  if(infoEl){
-    if(nextGame){
-      infoEl.textContent='Invictos FC vs '+(nextGame.opponent||'?');
-      if(subEl)subEl.textContent=(nextGame.date?'📅 '+fmtDate(nextGame.date):'')+(nextGame.time?' · 🕐 '+nextGame.time:'')+(nextGame.location?' · 📍 '+nextGame.location:'');
-    }else{
-      infoEl.textContent='Nenhum jogo agendado';
-      if(subEl)subEl.textContent='';
+  // Preenche o select de jogos
+  var sel=document.getElementById('pag-game-select');
+  if(sel&&cache.games.length>0){
+    var today=todayStr();
+    // Jogos agendados primeiro (próximos), depois os passados (mais recente primeiro)
+    var agendados=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+    var passados=cache.games.filter(function(g){return g.status!=='agendado'||g.date<today;}).sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,10);
+    var allGames=[].concat(agendados,passados);
+    var currentVal=sel.value;
+    sel.innerHTML='<option value="">— selecione o jogo —</option>';
+    allGames.forEach(function(g){
+      var label='Invictos FC vs '+g.opponent+(g.date?' · '+fmtDate(g.date):'');
+      var opt=document.createElement('option');
+      opt.value=g.id;opt.textContent=label;
+      if(g.id===currentVal)opt.selected=true;
+      sel.appendChild(opt);
+    });
+    // Auto-seleciona próximo jogo se nenhum selecionado
+    if(!_pagGameId&&agendados.length>0){
+      sel.value=agendados[0].id;
+      onPagGameChange();
+      return; // onPagGameChange vai chamar renderPagamentos de novo
     }
   }
+  var valor=parseFloat(document.getElementById('pag-valor')?document.getElementById('pag-valor').value:'')||0;
   // Atualiza dica de valor no card PIX
   var pixHint=document.getElementById('pix-valor-hint');
   var pixValShow=document.getElementById('pix-val-show');
@@ -2088,8 +2137,11 @@ function renderPagamentos(){
     if(valor>0){pixHint.style.display='block';pixValShow.textContent='R$ '+valor.toFixed(2).replace('.',',');}
     else{pixHint.style.display='none';}
   }
-  var confirmedPlayers=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
-  var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
+  // Usa confirmados do jogo selecionado (confirmed_GAMEID via listener)
+  var selectedGame=_pagGameId?cache.games.find(function(g){return g.id===_pagGameId;}):null;
+  var confirmedIds=window._pagConfirmados||[];
+  var confirmedPlayers=cache.players.filter(function(p){return confirmedIds.includes(p.id);});
+  var gameGuests=selectedGame?(cache.guests||[]).filter(function(g){return g.gameId===selectedGame.id;}):[]; 
   var total=confirmedPlayers.length+gameGuests.length;
   var pagaram=confirmedPlayers.filter(function(p){return _pagamentos[p.id];}).length+gameGuests.filter(function(g){return _pagamentos['guest_'+g.id];}).length;
   var faltam=total-pagaram;
@@ -2121,23 +2173,25 @@ function renderPagamentos(){
   el.innerHTML=h;
 }
 window.limparPagamentos=async function(){
-  if(!confirm('Limpar todos os pagamentos?'))return;
+  if(!_pagGameId){showToast('Selecione um jogo primeiro!');return;}
+  if(!confirm('Limpar todos os pagamentos deste jogo?'))return;
   showSync(true);
   try{
-    var snap=await getDocs(collection(db,'payments'));
+    var snap=await getDocs(collection(db,_pagCol()));
     var b=writeBatch(db);
-    snap.docs.forEach(function(d){b.delete(doc(db,'payments',d.id));});
+    snap.docs.forEach(function(d){b.delete(doc(db,_pagCol(),d.id));});
     await b.commit();
     showToast('Pagamentos limpos!');
   }catch(e){showToast('Erro!');}
   showSync(false);
 };
 window.compartilharPagamentosWA=function(){
-  var today=todayStr();
-  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var selectedGame=_pagGameId?cache.games.find(function(g){return g.id===_pagGameId;}):null;
+  var nextGame=selectedGame;
   var valor=parseFloat(document.getElementById('pag-valor').value)||0;
-  var confirmedPlayers=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
-  var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
+  var confirmedIds=window._pagConfirmados||[];
+  var confirmedPlayers=cache.players.filter(function(p){return confirmedIds.includes(p.id);});
+  var gameGuests=selectedGame?(cache.guests||[]).filter(function(g){return g.gameId===selectedGame.id;}):[]; 
   var pagaram=confirmedPlayers.filter(function(p){return _pagamentos[p.id];});
   var pagaramGuests=gameGuests.filter(function(g){return _pagamentos['guest_'+g.id];});
   var faltamPagar=confirmedPlayers.filter(function(p){return !_pagamentos[p.id];});
@@ -2167,14 +2221,7 @@ async function startListeners(){
       renderGuestSection(window._currentGameId);
     }
   });
-  onSnapshot(collection(db,'payments'),function(snap){
-    _pagamentos={};
-    snap.docs.forEach(function(d){
-      var data=d.data();
-      _pagamentos[data.id]=true;
-    });
-    renderPagamentos();
-  });
+  // Listener de pagamentos agora é dinâmico (por jogo) - iniciado em onPagGameChange()
   onSnapshot(collection(db,'confrats'),snap=>{cache.confrats=snap.docs.map(d=>({id:d.id,...d.data()}));renderConfratList();});
 }
 
@@ -2398,6 +2445,14 @@ window.zerarListaAgora=async function(){
     snapConf.docs.forEach(function(d){b.delete(doc(db,'confirmed',d.id));});
     snapAbs.docs.forEach(function(d){b.delete(doc(db,'absent',d.id));});
     await b.commit();
+    // Reseta seleção de jogo para forçar reload
+    _pagGameId=null;
+    if(window._pagUnsubscribe){try{window._pagUnsubscribe();}catch(e){}}
+    window._pagUnsubscribe=null;
+    _pagamentos={};
+    var sel=document.getElementById('pag-game-select');
+    if(sel)sel.value='';
+    renderPagamentos();
     showToast('✅ Lista zerada!');
   }catch(e){showToast('Erro ao zerar lista!');}
   showSync(false);
@@ -2438,6 +2493,14 @@ window.salvarEZerarLista=async function(){
     snapConf.docs.forEach(function(d){b.delete(doc(db,'confirmed',d.id));});
     snapAbs.docs.forEach(function(d){b.delete(doc(db,'absent',d.id));});
     await b.commit();
+    // Reset seleção de pagamentos
+    _pagGameId=null;
+    if(window._pagUnsubscribe){try{window._pagUnsubscribe();}catch(e){}}
+    window._pagUnsubscribe=null;
+    _pagamentos={};
+    var sel=document.getElementById('pag-game-select');
+    if(sel)sel.value='';
+    renderPagamentos();
     showToast('✅ Lista salva no jogo! Zerada para o próximo 🦁');
   }catch(e){showToast('Erro ao salvar lista!');}
   showSync(false);
