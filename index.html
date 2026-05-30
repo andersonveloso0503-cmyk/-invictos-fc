@@ -2097,7 +2097,14 @@ function renderPagamentos(){
   }
   el.innerHTML=h;
 }
-window.togglePagamento=function(id){_pagamentos[id]=!_pagamentos[id];renderPagamentos();};
+var _pagamentos={};
+window.togglePagamento=async function(id){
+  if(_pagamentos[id]){
+    try{ await deleteDoc(doc(db,'payments',id.replace(/[^a-zA-Z0-9_]/g,'_'))); }catch(e){}
+  }else{
+    try{ await setDoc(doc(db,'payments',id.replace(/[^a-zA-Z0-9_]/g,'_')),{id,paidAt:Date.now()}); }catch(e){}
+  }
+};
 window.limparPagamentos=window.limparPagamentos=async function(){
   if(!confirm('Limpar todos os pagamentos?'))return;
   showSync(true);
@@ -2144,6 +2151,14 @@ async function startListeners(){
     if(window._currentGameId&&document.getElementById('modal-gameDetail').classList.contains('open')){
       renderGuestSection(window._currentGameId);
     }
+  });
+  onSnapshot(collection(db,'payments'),function(snap){
+    _pagamentos={};
+    snap.docs.forEach(function(d){
+      var data=d.data();
+      _pagamentos[data.id]=true;
+    });
+    renderPagamentos();
   });
   onSnapshot(collection(db,'confrats'),snap=>{cache.confrats=snap.docs.map(d=>({id:d.id,...d.data()}));renderConfratList();});
 }
