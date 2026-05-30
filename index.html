@@ -2013,6 +2013,7 @@ window.confirmPos=async function(pos){
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 // ===== PAGAMENTOS =====
+var _pagamentos={};
 window.togglePagamento=async function(id){
   if(_pagamentos[id]){
     // desmarcar
@@ -2097,14 +2098,6 @@ function renderPagamentos(){
   }
   el.innerHTML=h;
 }
-var _pagamentos={};
-window.togglePagamento=async function(id){
-  if(_pagamentos[id]){
-    try{ await deleteDoc(doc(db,'payments',id.replace(/[^a-zA-Z0-9_]/g,'_'))); }catch(e){}
-  }else{
-    try{ await setDoc(doc(db,'payments',id.replace(/[^a-zA-Z0-9_]/g,'_')),{id,paidAt:Date.now()}); }catch(e){}
-  }
-};
 window.limparPagamentos=window.limparPagamentos=async function(){
   if(!confirm('Limpar todos os pagamentos?'))return;
   showSync(true);
