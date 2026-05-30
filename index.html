@@ -453,6 +453,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   <!-- Botão Salvar Lista -->
   <div style="margin-top:11px">
     <button class="btn-wa" style="background:linear-gradient(135deg,#1a4a8B,#0d2460);margin-bottom:8px" onclick="salvarEZerarLista()">💾 SALVAR LISTA DO JOGO E ZERAR PARA PRÓXIMO</button>
+    <button class="btn-wa" style="background:linear-gradient(135deg,#8B1A1A,#5C0E0E);font-size:.72rem" onclick="zerarListaAgora()">🗑️ ZERAR LISTA AGORA (SEM SALVAR)</button>
   </div>
 
   <!-- Botão WhatsApp -->
@@ -2387,6 +2388,21 @@ window.compartilharLinkConf=function(gameId,opp,date,time,loc){
 };
 
 // ===== SALVAR LISTA E ZERAR =====
+window.zerarListaAgora=async function(){
+  if(!confirm('🗑️ ZERAR LISTA\n\nIsso vai apagar todos os confirmados e ausentes do Firestore SEM salvar no jogo.\n\nTem certeza?'))return;
+  showSync(true);
+  try{
+    var snapConf=await getDocs(collection(db,'confirmed'));
+    var snapAbs=await getDocs(collection(db,'absent'));
+    var b=writeBatch(db);
+    snapConf.docs.forEach(function(d){b.delete(doc(db,'confirmed',d.id));});
+    snapAbs.docs.forEach(function(d){b.delete(doc(db,'absent',d.id));});
+    await b.commit();
+    showToast('✅ Lista zerada!');
+  }catch(e){showToast('Erro ao zerar lista!');}
+  showSync(false);
+};
+
 window.salvarEZerarLista=async function(){
   var conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
   var abs=cache.players.filter(function(p){return cache.absent.includes(p.id);});
@@ -2415,9 +2431,12 @@ window.salvarEZerarLista=async function(){
       pagamentosJogo:{}
     };
     await setDoc(doc(db,'games',nextGame.id),Object.assign({},cache.games.find(function(g){return g.id===nextGame.id;}),jogoPatch));
+    // Apaga TUDO do Firestore (não só o cache, pega todos os docs reais)
+    var snapConf=await getDocs(collection(db,'confirmed'));
+    var snapAbs=await getDocs(collection(db,'absent'));
     var b=writeBatch(db);
-    cache.confirmed.forEach(function(id){b.delete(doc(db,'confirmed',id));});
-    cache.absent.forEach(function(id){b.delete(doc(db,'absent',id));});
+    snapConf.docs.forEach(function(d){b.delete(doc(db,'confirmed',d.id));});
+    snapAbs.docs.forEach(function(d){b.delete(doc(db,'absent',d.id));});
     await b.commit();
     showToast('✅ Lista salva no jogo! Zerada para o próximo 🦁');
   }catch(e){showToast('Erro ao salvar lista!');}
