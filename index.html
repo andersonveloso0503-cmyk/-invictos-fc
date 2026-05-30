@@ -371,6 +371,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       <button class="btn-wa" style="flex:1" onclick="compartilharLista()"><span>📋</span> COMPARTILHAR LISTA</button>
       <button class="btn-can" style="flex:1;margin-top:0" onclick="limparConf()">🗑️ Limpar</button>
     </div>
+
   </div>
   <div class="sh"><h2>📊 ESTATÍSTICAS</h2><div class="sl"></div></div>
   <div class="sgrid" id="teamStatsGrid"></div>
@@ -449,8 +450,13 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   </div>
   <div id="pag-list"></div>
 
-  <!-- Botão WhatsApp -->
+  <!-- Botão Salvar Lista -->
   <div style="margin-top:11px">
+    <button class="btn-wa" style="background:linear-gradient(135deg,#1a4a8B,#0d2460);margin-bottom:8px" onclick="salvarEZerarLista()">💾 SALVAR LISTA DO JOGO E ZERAR PARA PRÓXIMO</button>
+  </div>
+
+  <!-- Botão WhatsApp -->
+  <div style="margin-top:0">
     <button class="btn-wa" onclick="compartilharPagamentosWA()"><span>📲</span> ENVIAR COBRANÇA NO WHATSAPP</button>
   </div>
 </div>
@@ -888,6 +894,15 @@ window.openGameDetail=function(id){window._currentGameId=id;
         <div style="display:flex;flex-wrap:wrap">${absentPlayers.map(p=>`<div class="abs-chip">${p.nick||p.name.split(' ')[0]}</div>`).join('')}</div>
       </div>`:'' }
     ${waAfter}
+    ${g.status==='agendado'?`
+    <div style="margin-top:14px;background:var(--s2);border:1px solid rgba(201,168,76,.35);border-radius:11px;padding:12px 13px">
+      <div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:7px">🔗 LINK DE CONFIRMAÇÃO DE PRESENÇA</div>
+      <div style="font-family:monospace;font-size:.65rem;color:var(--tm);word-break:break-all;line-height:1.5;margin-bottom:9px;background:var(--s);border-radius:6px;padding:7px 9px">https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo=${id}</div>
+      <div style="display:flex;gap:7px">
+        <button onclick="copiarLinkConf('${id}')" style="flex:1;padding:9px;background:var(--s);border:1px solid var(--br);border-radius:8px;color:var(--g);font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:1px;cursor:pointer">📋 COPIAR LINK</button>
+        <button onclick="compartilharLinkConf('${id}','${g.opponent}','${g.date||''}','${g.time||''}','${(g.location||'').replace(/'/g,'\\'')}')" style="flex:1;padding:9px;background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:8px;color:#fff;font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:1px;cursor:pointer">📲 ENVIAR NO WA</button>
+      </div>
+    </div>`:''}
   `;
   openModal('gameDetail');
   // Add guest section to modal
@@ -1535,6 +1550,9 @@ window.convocarWA=function(){
   var ex=document.getElementById('wa-extra').value.trim();
   var valor=document.getElementById('wa-valor').value.trim();
   var confirmed=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var confLink=nextGame?'https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+nextGame.id:'';
   var nl='\n';
   var lista='';
   for(var i=1;i<=17;i++){var p=confirmed[i-1];lista+=(i)+'. '+(p?(p.nick||p.name)+' OK':'')+nl;}
@@ -1546,6 +1564,7 @@ window.convocarWA=function(){
   msg+='LISTA DO JOGO:'+nl+lista+nl+'Coloque seu nome!'+nl+nl;
   msg+='App: https://andersonveloso0503-cmyk.github.io/-invictos-fc'+nl;
   if(ex)msg+=nl+ex+nl;
+  if(confLink)msg+=nl+'👇 Confirme sua presença pelo link abaixo:'+nl+'🔗 '+confLink+nl;
   msg+=nl+'Invictos FC - Nunca Rendidos!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
@@ -1967,6 +1986,9 @@ window.convocarGrupo=function(){
   var tm=document.getElementById('wa-time').value;
   var lc=document.getElementById('wa-location').value.trim();
   var valor=document.getElementById('wa-valor').value.trim();
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var confLink=nextGame?'https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+nextGame.id:'';
   var nl='\n';
   var msg='INVICTOS FC - CONVOCAÇÃO'+nl+nl;
   msg+='⚔️ Invictos FC vs '+op+nl;
@@ -1975,8 +1997,8 @@ window.convocarGrupo=function(){
   msg+='💰 R$ '+(valor||'25')+',00 por jogador'+nl+nl;
   msg+='🦁 CONVOCADOS:'+nl;
   sel.forEach(function(p,i){msg+=(i+1)+'. '+(p.nick||p.name)+nl;});
-  msg+=nl+'Confirme presença no app:'+nl+'🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc'+nl+nl;
-  msg+='👊 Invictos FC - Nunca Rendidos!';
+  if(confLink)msg+=nl+'👇 *Clique no link abaixo e confirme sua presença:*'+nl+'🔗 '+confLink+nl;
+  msg+=nl+'👊 Invictos FC - Nunca Rendidos!';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 window.selectPos=function(pos,btn){
@@ -2334,6 +2356,73 @@ function stopVictoryConfetti(){
   if(_vConfAnim){cancelAnimationFrame(_vConfAnim);_vConfAnim=null;}
   const c=document.getElementById('vConfCanvas');if(c)c.remove();
 }
+// ===== LINK DE CONFIRMAÇÃO =====
+window.copiarLinkConf=function(gameId){
+  var link='https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(link).then(function(){showToast('Link copiado! 📋');}).catch(function(){_copyLinkFallback(link);});
+  }else{_copyLinkFallback(link);}
+};
+function _copyLinkFallback(txt){
+  var el=document.createElement('textarea');el.value=txt;
+  el.style.cssText='position:fixed;opacity:0';document.body.appendChild(el);
+  el.select();try{document.execCommand('copy');showToast('Link copiado! 📋');}catch(e){showToast('Copie manualmente!');}
+  document.body.removeChild(el);
+}
+window.compartilharLinkConf=function(gameId,opp,date,time,loc){
+  var link='https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId;
+  function fmtD(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+  var msg='⚽ *INVICTOS FC — CONFIRME SUA PRESENÇA!*\n\n';
+  msg+='🏆 Invictos FC vs '+opp+'\n';
+  if(date)msg+='📅 '+fmtD(date);
+  if(time)msg+=' · 🕐 '+time+'h';
+  if(date||time)msg+='\n';
+  if(loc)msg+='📍 '+loc+'\n';
+  msg+='\n👇 *Clique no link, escolha seu nome e confirme:*\n\n';
+  msg+='🔗 '+link+'\n\n';
+  msg+='✅ Confirme e avise no grupo!\n';
+  msg+='🦁 _Invictos FC — Nunca Rendidos!_';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+};
+
+// ===== SALVAR LISTA E ZERAR =====
+window.salvarEZerarLista=async function(){
+  var conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
+  var abs=cache.players.filter(function(p){return cache.absent.includes(p.id);});
+  if(conf.length===0&&abs.length===0){showToast('Lista vazia, nada para salvar!');return;}
+  var today=todayStr();
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var total=conf.length;
+  var nomes=conf.slice(0,5).map(function(p){return p.nick||p.name.split(' ')[0];}).join(', ');
+  var mais=conf.length>5?' e mais '+(conf.length-5)+'...':'';
+  var jogo=nextGame?'⚽ Jogo: Invictos FC vs '+nextGame.opponent+'\n📅 '+fmtDate(nextGame.date)+'\n\n':'';
+  var confirmou=confirm(
+    '💾 SALVAR LISTA DO JOGO\n\n'+jogo+
+    '✅ Confirmados: '+total+' jogador'+(total!==1?'es':'')+'\n'+
+    (nomes?'👥 '+nomes+mais+'\n':'')+
+    '❌ Ausentes: '+abs.length+'\n\n'+
+    '⚠️ A lista será salva no jogo e zerada para o próximo.\n\nDeseja continuar?'
+  );
+  if(!confirmou)return;
+  if(!nextGame){showToast('Nenhum jogo agendado encontrado!');return;}
+  showSync(true);
+  try{
+    var jogoPatch={
+      listaConfirmados:cache.confirmed.slice(),
+      listaAusentes:cache.absent.slice(),
+      listaSalvaEm:Date.now(),
+      pagamentosJogo:{}
+    };
+    await setDoc(doc(db,'games',nextGame.id),Object.assign({},cache.games.find(function(g){return g.id===nextGame.id;}),jogoPatch));
+    var b=writeBatch(db);
+    cache.confirmed.forEach(function(id){b.delete(doc(db,'confirmed',id));});
+    cache.absent.forEach(function(id){b.delete(doc(db,'absent',id));});
+    await b.commit();
+    showToast('✅ Lista salva no jogo! Zerada para o próximo 🦁');
+  }catch(e){showToast('Erro ao salvar lista!');}
+  showSync(false);
+};
+
 init();
 
 
