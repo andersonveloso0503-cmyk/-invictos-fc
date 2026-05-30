@@ -660,7 +660,6 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
 
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,getDocs,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import{getMessaging,getToken,onMessage}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 const firebaseConfig={apiKey:"AIzaSyD1mZByKu8_M1YYsL7ILbEQvDzMWRry_Z8",authDomain:"invictos-fc.firebaseapp.com",projectId:"invictos-fc",storageBucket:"invictos-fc.firebasestorage.app",messagingSenderId:"574008215295",appId:"1:574008215295:web:12ef89cd87d6d5a2192eca"};
 const app=initializeApp(firebaseConfig);
@@ -900,7 +899,7 @@ window.openGameDetail=function(id){window._currentGameId=id;
       <div style="font-family:monospace;font-size:.65rem;color:var(--tm);word-break:break-all;line-height:1.5;margin-bottom:9px;background:var(--s);border-radius:6px;padding:7px 9px">https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo=${id}</div>
       <div style="display:flex;gap:7px">
         <button onclick="copiarLinkConf('${id}')" style="flex:1;padding:9px;background:var(--s);border:1px solid var(--br);border-radius:8px;color:var(--g);font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:1px;cursor:pointer">📋 COPIAR LINK</button>
-        <button onclick="compartilharLinkConf('${id}','${g.opponent}','${g.date||''}','${g.time||''}','${(g.location||'').replace(/'/g,'\\'')}')" style="flex:1;padding:9px;background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:8px;color:#fff;font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:1px;cursor:pointer">📲 ENVIAR NO WA</button>
+        <button onclick="compartilharLinkConf('${id}')" style="flex:1;padding:9px;background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:8px;color:#fff;font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:1px;cursor:pointer">📲 ENVIAR NO WA</button>
       </div>
     </div>`:''}
   `;
@@ -2370,6 +2369,8 @@ function _copyLinkFallback(txt){
   document.body.removeChild(el);
 }
 window.compartilharLinkConf=function(gameId,opp,date,time,loc){
+  var g=cache.games.find(function(x){return x.id===gameId;});
+  if(g&&!opp){opp=g.opponent;date=g.date;time=g.time;loc=g.location;}
   var link='https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId;
   function fmtD(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
   var msg='⚽ *INVICTOS FC — CONFIRME SUA PRESENÇA!*\n\n';
