@@ -2013,8 +2013,15 @@ window.confirmPos=async function(pos){
 window.forcSync=async function(){showSync(true);try{await seedGames();showToast('Sincronizado! ✅');}catch(e){showToast('Erro!');}showSync(false);};
 
 // ===== PAGAMENTOS =====
-var _pagamentos={};
-var PIX_KEY='ddc238a6-7ac5-4cb0-8c83-76287e78bada';
+window.togglePagamento=async function(id){
+  if(_pagamentos[id]){
+    // desmarcar
+    try{ await deleteDoc(doc(db,'payments',id.replace(/[^a-zA-Z0-9_]/g,'_'))); }catch(e){}
+  }else{
+    // marcar como pago
+    try{ await setDoc(doc(db,'payments',id.replace(/[^a-zA-Z0-9_]/g,'_')),{id,paidAt:Date.now()}); }catch(e){}
+  }
+};var PIX_KEY='ddc238a6-7ac5-4cb0-8c83-76287e78bada';
 
 function initPixQR(){
   var qrEl=document.getElementById('pix-qr');
@@ -2091,7 +2098,18 @@ function renderPagamentos(){
   el.innerHTML=h;
 }
 window.togglePagamento=function(id){_pagamentos[id]=!_pagamentos[id];renderPagamentos();};
-window.limparPagamentos=function(){if(!confirm('Limpar todos os pagamentos?'))return;_pagamentos={};renderPagamentos();showToast('Pagamentos limpos!');};
+window.limparPagamentos=window.limparPagamentos=async function(){
+  if(!confirm('Limpar todos os pagamentos?'))return;
+  showSync(true);
+  try{
+    var snap=await getDocs(collection(db,'payments'));
+    var b=writeBatch(db);
+    snap.docs.forEach(function(d){b.delete(doc(db,'payments',d.id));});
+    await b.commit();
+    showToast('Pagamentos limpos!');
+  }catch(e){showToast('Erro!');}
+  showSync(false);
+};
 window.compartilharPagamentosWA=function(){
   var today=todayStr();
   var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
