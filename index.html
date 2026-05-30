@@ -2109,19 +2109,75 @@ function renderPagamentos(){
   var sel=document.getElementById('pag-game-select');
   if(sel&&cache.games.length>0){
     var today=todayStr();
-    // Jogos agendados primeiro (próximos), depois os passados (mais recente primeiro)
-    var agendados=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-    var passados=cache.games.filter(function(g){return g.status!=='agendado'||g.date<today;}).sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,10);
-    var allGames=[].concat(agendados,passados);
+    // Agrupa: agendados futuros (mais próximo primeiro) + jogos com resultado (mais recente primeiro)
+    var agendados=cache.games
+      .filter(function(g){return g.status==='agendado'&&g.date>=today;})
+      .sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+    var comResultado=cache.games
+      .filter(function(g){return g.status==='vitoria'||g.status==='derrota'||g.status==='empate'||g.status==='cancelado';})
+      .sort(function(a,b){return new Date(b.date)-new Date(a.date);})
+      .slice(0,15);
+    // Remove duplicatas por data+adversário (mantém só o que tem confirmados)
+    var seen={};
+    var allGames=[];
+    [].concat(agendados,comResultado).forEach(function(g){
+      var key=g.date+'_'+g.opponent;
+      if(!seen[key]){seen[key]=g;allGames.push(g);}
+      else{
+        // Se o atual não tem confirmados e o já visto tem, ignora o atual
+        // Se o atual tem confirmados e o já visto não, substitui
+        // (já visto sempre fica, pois agendados vêm primeiro)
+      }
+    });
     var currentVal=sel.value;
     sel.innerHTML='<option value="">— selecione o jogo —</option>';
-    allGames.forEach(function(g){
-      var label='Invictos FC vs '+g.opponent+(g.date?' · '+fmtDate(g.date):'');
-      var opt=document.createElement('option');
-      opt.value=g.id;opt.textContent=label;
-      if(g.id===currentVal)opt.selected=true;
-      sel.appendChild(opt);
-    });
+    // Separador: próximos jogos
+    if(agendados.length>0){
+      var grpP=document.createElement('optgroup');grpP.label='⚡ PRÓXIMOS JOGOS';
+      agendados.forEach(function(g){
+        var opt=document.createElement('option');
+        opt.value=g.id;
+        opt.textContent='vs '+g.opponent+(g.date?' · '+fmtDate(g.date):'');
+        if(g.id===currentVal)opt.selected=true;
+        grpP.appendChild(opt);
+      });
+      sel.appendChild(grpP);
+    }
+    // Separador: jogos passados
+    if(comResultado.length>0){
+      // Remove duplicatas de data+adversário que já estão nos agendados
+      var agendadosKeys=agendados.map(function(g){return g.date+'_'+g.opponent;});
+      var passadosUnicos=comResultado.filter(function(g){
+        return !agendadosKeys.includes(g.date+'_'+g.opponent);
+      });
+      // Remove duplicatas por data+adversário — prefere o ag00X (tem confirmed seedado)
+      var seenP={};
+      passadosUnicos=passadosUnicos.filter(function(g){
+        var key=g.date+'_'+g.opponent;
+        if(!seenP[key]){seenP[key]=g;return true;}
+        // Já existe — prefere o que começa com 'ag' (tem confirmed seedado)
+        var prev=seenP[key];
+        if(g.id.startsWith('ag')&&!prev.id.startsWith('ag')){
+          // Troca: remove prev, adiciona este
+          seenP[key]=g;
+          passadosUnicos=passadosUnicos.filter(function(x){return x!==prev;});
+          return true;
+        }
+        return false;
+      });
+      if(passadosUnicos.length>0){
+        var grpH=document.createElement('optgroup');grpH.label='📅 JOGOS ANTERIORES';
+        passadosUnicos.forEach(function(g){
+          var statusEmoji=g.status==='vitoria'?'✅':g.status==='derrota'?'❌':g.status==='empate'?'🤝':'❌';
+          var opt=document.createElement('option');
+          opt.value=g.id;
+          opt.textContent=statusEmoji+' vs '+g.opponent+(g.date?' · '+fmtDate(g.date):'');
+          if(g.id===currentVal)opt.selected=true;
+          grpH.appendChild(opt);
+        });
+        sel.appendChild(grpH);
+      }
+    }
     // Auto-seleciona próximo jogo se nenhum selecionado
     if(!_pagGameId&&agendados.length>0){
       sel.value=agendados[0].id;
