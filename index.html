@@ -1186,8 +1186,21 @@ window.saveGame=async function(){
   try{
     const id='g'+Date.now();
     const notas=collectNotas();
-    await setDoc(doc(db,'games',id),{id,opponent:opp,date:document.getElementById('g-date').value,time:document.getElementById('g-time').value,location:document.getElementById('g-location').value,status:document.getElementById('g-status').value,goalsUs:parseInt(document.getElementById('g-goals-us').value)||0,goalsThem:parseInt(document.getElementById('g-goals-them').value)||0,scorers:document.getElementById('g-scorers').value,assists:document.getElementById('g-assists').value,notes:document.getElementById('g-notes').value,notas});
-    closeModal('addGame');showToast('Jogo salvo! ⚽');
+    const st=document.getElementById('g-status').value;
+    await setDoc(doc(db,'games',id),{id,opponent:opp,date:document.getElementById('g-date').value,time:document.getElementById('g-time').value,location:document.getElementById('g-location').value,status:st,goalsUs:parseInt(document.getElementById('g-goals-us').value)||0,goalsThem:parseInt(document.getElementById('g-goals-them').value)||0,scorers:document.getElementById('g-scorers').value,assists:document.getElementById('g-assists').value,notes:document.getElementById('g-notes').value,notas});
+    closeModal('addGame');
+    if(st==='vitoria'){
+      showVictoryBanner({
+        goalsUs:document.getElementById('g-goals-us').value,
+        goalsThem:document.getElementById('g-goals-them').value,
+        opp:opp,
+        scorers:document.getElementById('g-scorers').value.trim(),
+        date:document.getElementById('g-date').value,
+        location:document.getElementById('g-location').value.trim()
+      });
+    }else{
+      showToast('Jogo salvo! ⚽');
+    }
     ['g-opponent','g-location','g-time','g-scorers','g-assists','g-notes'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('g-goals-us').value=0;document.getElementById('g-goals-them').value=0;
   }catch(e){showToast('Erro ao salvar!');}
@@ -2179,7 +2192,122 @@ async function init(){
     }).catch(function(e){console.log('SW error:',e);});
   }
 }
+function showVictoryBanner({goalsUs, goalsThem, opp, scorers, date, location}){
+  const existing=document.getElementById('victoryOverlay');
+  if(existing)existing.remove();
 
+  function fmtD(d){if(!d)return'';const[y,m,day]=d.split('-');return day+'/'+m+'/'+y;}
+
+  const ov=document.createElement('div');
+  ov.id='victoryOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,6,4,.88);display:flex;align-items:flex-end;justify-content:center;padding-bottom:env(safe-area-inset-bottom,24px);padding-left:13px;padding-right:13px;animation:vFadeIn .4s ease';
+
+  const style=document.createElement('style');
+  style.textContent=`
+    @keyframes vFadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes vSlideUp{from{transform:translateY(100px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes vPulse{0%,100%{box-shadow:0 0 0 0 rgba(201,168,76,.5)}50%{box-shadow:0 0 0 8px rgba(201,168,76,0)}}
+    @keyframes vBounce{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+    #vBanner{background:#0A0604;border:2px solid #C9A84C;border-radius:16px;width:100%;max-width:460px;overflow:hidden;animation:vSlideUp .6s cubic-bezier(.34,1.56,.64,1) both;margin-bottom:10px}
+    #vBanner .vbar{height:3px;background:linear-gradient(90deg,#8B1A1A,#C9A84C,#8B1A1A)}
+    #vBanner .vbadge{display:inline-flex;align-items:center;gap:6px;background:#8B1A1A;border:1px solid rgba(201,168,76,.4);border-radius:20px;padding:4px 14px;font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:#F0C040;letter-spacing:2px;margin-bottom:10px;animation:vPulse 2s infinite}
+    #vBanner .vtrophy{font-size:36px;display:block;margin-bottom:2px;animation:vBounce .7s .4s both}
+    #vBanner .vtitle{font-family:'Cinzel',serif;font-size:22px;font-weight:900;color:#F0C040;letter-spacing:3px;margin:0 0 2px;line-height:1.1}
+    #vBanner .vsub{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:#9A8060;letter-spacing:2px;margin-bottom:14px}
+    #vBanner .vscore-row{display:flex;align-items:center;gap:8px;background:#130A04;border:1px solid rgba(201,168,76,.25);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+    #vBanner .vteam{flex:1;font-family:'Cinzel',serif;font-size:12px;font-weight:700;color:#F5E6C8}
+    #vBanner .vteam.r{text-align:right}
+    #vBanner .vscore{font-family:'Cinzel',serif;font-size:26px;font-weight:900;color:#F0C040;min-width:70px;text-align:center}
+    #vBanner .vscore span{color:#9A8060;font-size:16px;margin:0 2px}
+    #vBanner .vinfo{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    #vBanner .vdet{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:#9A8060}
+    #vBanner .vsc{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:#C9A84C;background:#1E1008;border-radius:7px;padding:8px 12px;margin-bottom:12px;line-height:1.5}
+    #vBanner .vbtns{display:flex;gap:8px}
+    #vBanner .vbtn-wa{flex:1;padding:11px;background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:8px;color:#fff;font-family:'Cinzel',serif;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer}
+    #vBanner .vbtn-x{padding:11px 15px;background:none;border:1px solid rgba(201,168,76,.3);border-radius:8px;color:#9A8060;font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+    #vConfCanvas{position:fixed;inset:0;pointer-events:none;z-index:99998}
+  `;
+  document.head.appendChild(style);
+
+  ov.innerHTML=`
+    <div id="vBanner">
+      <div class="vbar"></div>
+      <div style="padding:18px 18px 20px">
+        <div class="vbadge">🏆 VITÓRIA CONFIRMADA</div>
+        <span class="vtrophy">🦁</span>
+        <div class="vtitle">INVICTOS FC</div>
+        <div class="vsub">NUNCA RENDIDOS · SEMPRE GUERREIROS</div>
+        <div class="vscore-row">
+          <div class="vteam">Invictos FC</div>
+          <div class="vscore">${goalsUs}<span>×</span>${goalsThem}</div>
+          <div class="vteam r">${opp}</div>
+        </div>
+        <div class="vinfo">
+          ${date?`<span class="vdet">📅 ${fmtD(date)}</span>`:''}
+          ${location?`<span class="vdet">📍 ${location}</span>`:''}
+        </div>
+        ${scorers?`<div class="vsc">⚽ Gols: ${scorers}</div>`:''}
+        <div class="vbtns">
+          <button class="vbtn-wa" onclick="shareVictoryWA(${goalsUs},${goalsThem},'${opp.replace(/'/g,"\\'")}','${(scorers||'').replace(/'/g,"\\'")}')">📲 COMPARTILHAR NO WHATSAPP</button>
+          <button class="vbtn-x" onclick="closeVictoryBanner()">✕</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{if(e.target===ov)closeVictoryBanner();});
+  startVictoryConfetti();
+  setTimeout(()=>closeVictoryBanner(), 8000);
+}
+
+function closeVictoryBanner(){
+  const ov=document.getElementById('victoryOverlay');
+  if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov.remove(),300);}
+  stopVictoryConfetti();
+}
+
+function shareVictoryWA(us,them,opp,scorers){
+  let msg='🏆 *VITÓRIA DO INVICTOS FC!*\n\n';
+  msg+='⚽ Invictos FC '+us+' × '+them+' '+opp+'\n';
+  if(scorers)msg+='\n⚽ Gols: '+scorers+'\n';
+  msg+='\n🦁 _Nunca Rendidos — Sempre Guerreiros!_';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+let _vConfAnim=null;
+function startVictoryConfetti(){
+  const existing=document.getElementById('vConfCanvas');if(existing)existing.remove();
+  const canvas=document.createElement('canvas');
+  canvas.id='vConfCanvas';
+  canvas.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:99998;width:100%;height:100%';
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx=canvas.getContext('2d');
+  const colors=['#F0C040','#8B1A1A','#C9A84C','#ffffff','#F5E6C8','#5C0E0E'];
+  const particles=Array.from({length:80},()=>({
+    x:Math.random()*canvas.width,y:-20-Math.random()*100,
+    w:5+Math.random()*7,h:7+Math.random()*6,
+    vy:2+Math.random()*2.5,vx:(Math.random()-.5)*1.5,
+    rot:Math.random()*360,rotV:(Math.random()-.5)*5,
+    color:colors[Math.floor(Math.random()*colors.length)]
+  }));
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);
+      ctx.fillStyle=p.color;ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+      p.x+=p.vx;p.y+=p.vy;p.rot+=p.rotV;
+      if(p.y>canvas.height+20){p.y=-20;p.x=Math.random()*canvas.width;}
+    });
+    _vConfAnim=requestAnimationFrame(draw);
+  }
+  draw();
+}
+function stopVictoryConfetti(){
+  if(_vConfAnim){cancelAnimationFrame(_vConfAnim);_vConfAnim=null;}
+  const c=document.getElementById('vConfCanvas');if(c)c.remove();
+}
 init();
 
 
