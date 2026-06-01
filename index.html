@@ -766,10 +766,12 @@ function renderHome(){
     const liveStatus=getGameStatus(n);
     const isLive=liveStatus==='live';
     const du=daysUntil(n.date);
-    const confCount=cache.confirmed.length;
     const guestCount=(cache.guests||[]).filter(function(g){return g.gameId===n.id;}).length;
+    // Busca confirmados específicos do jogo
+    const gameConfIds=(cache.confirmedByGame&&cache.confirmedByGame[n.id])||cache.confirmed;
+    const confCount=gameConfIds.length;
     const totalConf=confCount+guestCount;
-    const confNames=cache.players.filter(p=>cache.confirmed.includes(p.id)).slice(0,3).map(p=>p.nick||p.name.split(' ')[0]).join(', ');
+    const confNames=cache.players.filter(p=>gameConfIds.includes(p.id)).slice(0,3).map(p=>p.nick||p.name.split(' ')[0]).join(', ');
     ns.innerHTML=`<div class="ngc ${isLive?'live':''}" onclick="openGameDetail('${n.id}')">
       <div class="ng-top">
         <div class="ng-lbl">⚡ ${isLive?'JOGO AO VIVO':'PRÓXIMO JOGO'}</div>
@@ -2311,6 +2313,18 @@ async function startListeners(){
   onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
   onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
+  // Listener do próximo jogo agendado para home
+  cache.confirmedByGame={};
+  onSnapshot(collection(db,'games'),async function(){
+    const today=todayStr();
+    const next=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
+    if(!next)return;
+    if(window._homeConfUnsub) window._homeConfUnsub();
+    window._homeConfUnsub=onSnapshot(collection(db,'confirmed_'+next.id),function(snap){
+      cache.confirmedByGame[next.id]=snap.docs.map(d=>d.id);
+      renderHome();
+    });
+  });
   onSnapshot(collection(db,'guests'),function(snap){
     cache.guests=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     renderHome();
