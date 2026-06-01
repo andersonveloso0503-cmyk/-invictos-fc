@@ -371,18 +371,26 @@ window.confirmar=async function(){
     const p=players.find(x=>x.id===selectedPlayerId);if(!p)return;
     try{
       await deleteDoc(doc(db,'absent_'+gameId,selectedPlayerId));
+      await deleteDoc(doc(db,'absent',selectedPlayerId));
       await setDoc(doc(db,'confirmed_'+gameId,selectedPlayerId),{id:selectedPlayerId});
+      await setDoc(doc(db,'confirmed',selectedPlayerId),{id:selectedPlayerId});
       showToast('✅ '+(p.nick||p.name)+' confirmado!');
       const confPlayers=players.filter(x=>confirmed.includes(x.id));
-      const nomes=confPlayers.map(x=>x.nick||x.name.split(' ')[0]).join(', ');
-      const total=confPlayers.length+guests.length+1;
+      // inclui o jogador que acabou de confirmar se ainda não está na lista
+      const allConf=[...confPlayers];
+      if(!allConf.find(x=>x.id===selectedPlayerId)) allConf.push(p);
+      const listaNum=allConf.map((x,i)=>(i+1)+'. '+(x.nick||x.name.split(' ')[0])).join('\n');
+      const guestList=guests.map((g,i)=>(allConf.length+i+1)+'. 🎟️ '+g.name+' (conv.)').join('\n');
+      const total=allConf.length+guests.length;
       const msg=
         '✅ *'+(p.nick||p.name)+' confirmou presença!*\n\n'+
         '⚽ *Invictos FC vs '+gameData.opponent+'*\n'+
         (gameData.date?'📅 '+fmtDate(gameData.date):'')+(gameData.time?' · 🕐 '+gameData.time:'')+'\n'+
         (gameData.location?'📍 '+gameData.location+'\n':'')+
-        '\n👥 *Confirmados ('+total+'):* '+(nomes?nomes+', '+(p.nick||p.name):(p.nick||p.name))+'\n\n'+
-        '🔗 Confirme sua presença:\nhttps://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n'+
+        '\n👥 *Lista confirmada ('+total+'):*\n'+
+        listaNum+
+        (guestList?'\n'+guestList:'')+
+        '\n\n🔗 Confirme sua presença:\nhttps://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n'+
         '🦁 _Invictos FC — Nunca Rendidos!_';
       setTimeout(()=>window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank'),500);
     }catch(e){showToast('Erro! Tente novamente.');}
@@ -396,14 +404,19 @@ window.confirmar=async function(){
       showToast('🎟️ '+nome+' confirmado como convidado!');
       document.getElementById('guest-name').value='';
       document.getElementById('guest-pos').value='';
-      const total=confirmed.length+guests.length+1;
+      const confPlayers2=players.filter(x=>confirmed.includes(x.id));
+      const listaNum2=confPlayers2.map((x,i)=>(i+1)+'. '+(x.nick||x.name.split(' ')[0])).join('\n');
+      const allGuests2=[...guests,{name:nome,pos}];
+      const guestList2=allGuests2.map((g,i)=>(confPlayers2.length+i+1)+'. 🎟️ '+g.name+' (conv.)').join('\n');
+      const total2=confPlayers2.length+allGuests2.length;
       const msg=
         '🎟️ *'+nome+(pos?' ('+pos+')':' (convidado)')+' confirmou presença!*\n\n'+
         '⚽ *Invictos FC vs '+gameData.opponent+'*\n'+
         (gameData.date?'📅 '+fmtDate(gameData.date):'')+(gameData.time?' · 🕐 '+gameData.time:'')+'\n'+
         (gameData.location?'📍 '+gameData.location+'\n':'')+
-        '\n👥 *Total confirmados: '+total+'*\n\n'+
-        '🔗 Confirme sua presença:\nhttps://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n'+
+        '\n👥 *Lista confirmada ('+total2+'):*\n'+
+        (listaNum2?listaNum2+'\n':'')+guestList2+
+        '\n\n🔗 Confirme sua presença:\nhttps://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n'+
         '🦁 _Invictos FC — Nunca Rendidos!_';
       setTimeout(()=>window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank'),500);
     }catch(e){showToast('Erro! Tente novamente.');}
@@ -417,7 +430,9 @@ window.cancelar=async function(){
     if(!confirm('Cancelar presença de '+(p.nick||p.name)+'?'))return;
     try{
       await deleteDoc(doc(db,'confirmed_'+gameId,selectedPlayerId));
+      await deleteDoc(doc(db,'confirmed',selectedPlayerId));
       await setDoc(doc(db,'absent_'+gameId,selectedPlayerId),{id:selectedPlayerId});
+      await setDoc(doc(db,'absent',selectedPlayerId),{id:selectedPlayerId});
       showToast('❌ Presença cancelada.');
       const msg=
         '❌ *'+(p.nick||p.name)+' cancelou a presença.*\n\n'+
