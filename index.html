@@ -2548,6 +2548,7 @@ function _copyLinkFallback(txt){
 window.compartilharLinkConf=function(gameId,opp,date,time,loc){
   var g=cache.games.find(function(x){return x.id===gameId;});
   if(g&&!opp){opp=g.opponent;date=g.date;time=g.time;loc=g.location;}
+  var addr=g?g.address:'';
   var link='https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId;
   function fmtD(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
   var msg='⚽ *INVICTOS FC — CONFIRME SUA PRESENÇA!*\n\n';
@@ -2556,6 +2557,8 @@ window.compartilharLinkConf=function(gameId,opp,date,time,loc){
   if(time)msg+=' · 🕐 '+time+'h';
   if(date||time)msg+='\n';
   if(loc)msg+='📍 '+loc+'\n';
+  if(addr)msg+='📌 '+addr+'\n';
+  if(addr)msg+='🗺️ https://maps.google.com/?q='+encodeURIComponent(addr)+'\n';
   msg+='\n👇 *Clique no link, escolha seu nome e confirme:*\n\n';
   msg+='🔗 '+link+'\n\n';
   msg+='✅ Confirme e avise no grupo!\n';
@@ -2715,6 +2718,8 @@ window.enviarListaConfirmadosWA=async function(gameId){
   if(g.time)msg+=' · 🕐 '+g.time+'h';
   if(g.date||g.time)msg+='\n';
   if(g.location)msg+='📍 '+g.location+'\n';
+  if(g.address)msg+='📌 '+g.address+'\n';
+  if(g.address)msg+='🗺️ https://maps.google.com/?q='+encodeURIComponent(g.address)+'\n';
   msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
   msg+='\n👇 Ainda não confirmou? Clique no link:\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
