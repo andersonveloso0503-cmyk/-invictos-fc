@@ -960,8 +960,10 @@ window.openGameDetail=function(id){window._currentGameId=id;
 
   var _modalConf=[];
   var _modalAbs=[];
+  window._modalConf=_modalConf;
   window._modalConfUnsub=onSnapshot(collection(db,'confirmed_'+id),function(snap){
     _modalConf=snap.docs.map(function(d){return d.id;});
+    window._modalConf=_modalConf;
     updateModalConfirmados(_modalConf,_modalAbs);
   });
   window._modalAbsUnsub=onSnapshot(collection(db,'absent_'+id),function(snap){
@@ -970,28 +972,6 @@ window.openGameDetail=function(id){window._currentGameId=id;
   });
   var gc=document.getElementById('gameDetailContent');
   if(gc){
-    var guests=(cache.guests||[]).filter(function(g){return g.gameId===id;});
-    // Update confirmed count in modal to include guests
-    var confBadges=gc.querySelectorAll('.fl');
-    confBadges.forEach(function(b){
-      if(b.textContent.indexOf('CONFIRMADOS')>=0){
-        b.id='confCountBadge';
-        var total=(confPlayers.length)+(guests.length);
-        b.textContent='✅ CONFIRMADOS ('+total+')';
-        // Append guest chips after player chips
-        var chipDiv=b.nextElementSibling;
-        if(chipDiv&&guests.length>0){
-          guests.forEach(function(g){
-            var chip=document.createElement('div');
-            chip.className='conf-chip';
-            chip.style.cssText='border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.1)';
-            var del=isAdmin?'<span data-gid="'+g.id+'" data-gameid="'+id+'" onclick="removeGuest(this.dataset.gid,this.dataset.gameid)" style="margin-left:4px;cursor:pointer;color:#F87171;font-size:.7rem">✕</span>':'';
-            chip.innerHTML='🎟️ '+g.name+del;
-            chipDiv.appendChild(chip);
-          });
-        }
-      }
-    });
     // Add guest input section at bottom
     var guestDiv=document.createElement('div');
     guestDiv.id='guestSection';
@@ -1019,11 +999,13 @@ function renderGuestSection(gameId){
     +'<input class="fi" id="guestNameInput" placeholder="Nome do convidado" style="width:100%;padding:11px 12px;font-size:.95rem;margin-bottom:8px">'
     +'<div style="margin-bottom:7px"><div style="font-size:.6rem;color:var(--tm);letter-spacing:1px;margin-bottom:5px">POSIÇÃO DO CONVIDADO</div><div style=\"display:flex;flex-wrap:wrap;gap:4px\"><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Goleiro\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Goleiro</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Zagueiro\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Zagueiro</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Lat. Direito\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Lat. Direito</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Lat. Esquerdo\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Lat. Esquerdo</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Volante\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Volante</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Atacante\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Atacante</button><button type=\"button\" class=\"fb guest-pos-chip\" data-pos=\"Centroavante\" onclick=\"selectGuestPos(this.dataset.pos,this)\">Centroavante</button></div></div>'
     +'<button class="btn-sub" style="width:100%;padding:11px;font-size:.85rem" data-gameid="'+gameId+'" onclick="addGuest(this.dataset.gameid)">➕ ADICIONAR CONVIDADO</button>';
-  // Update confirmed count badge
-  var badge=document.getElementById('confCountBadge');
-  if(badge){
-    var total=(cache.confirmed||[]).length+guests.length;
-    badge.textContent='✅ CONFIRMADOS ('+total+')';
+  // Update confirmed count via listener
+  if(window._modalConf!==undefined){
+    var countEl=document.getElementById('modalConfCount');
+    if(countEl){
+      var total2=(window._modalConf||[]).length+guests.length;
+      countEl.textContent='✅ CONFIRMADOS ('+total2+')';
+    }
   }
 }
 window.addGuest=async function(gameId){
