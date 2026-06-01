@@ -452,14 +452,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   </div>
   <div id="pag-list"></div>
 
-  <!-- Botão Salvar Lista -->
-  <div style="margin-top:11px">
-    <button class="btn-wa" style="background:linear-gradient(135deg,#1a4a8B,#0d2460);margin-bottom:8px" onclick="salvarEZerarLista()">💾 SALVAR LISTA DO JOGO E ZERAR PARA PRÓXIMO</button>
-    <button class="btn-wa" style="background:linear-gradient(135deg,#8B1A1A,#5C0E0E);font-size:.72rem" onclick="zerarListaAgora()">🗑️ ZERAR LISTA AGORA (SEM SALVAR)</button>
-  </div>
-
   <!-- Botão WhatsApp -->
-  <div style="margin-top:0">
+  <div style="margin-top:11px">
     <button class="btn-wa" onclick="compartilharPagamentosWA()"><span>📲</span> ENVIAR COBRANÇA NO WHATSAPP</button>
   </div>
 </div>
@@ -861,7 +855,30 @@ window.openGameDetail=function(id){window._currentGameId=id;
         <div style="text-align:center"><div style="font-size:.6rem;color:var(--tm);margin-bottom:4px">${g.opponent.toUpperCase()}</div><div class="gd-score-big">${g.goalsThem}</div></div>
       </div>
       <span class="gs ${sc}" style="padding:4px 12px">${sl}</span>
-    </div>`;
+    </div>
+    ${isAdmin?`<div id="editGameSection" style="display:none;margin-top:10px">
+      <div style="background:var(--s2);border:1px solid var(--br);border-radius:10px;padding:12px">
+        <div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:10px">✏️ EDITAR JOGO</div>
+        <div class="frow" style="margin-bottom:8px">
+          <div><div class="fl">Gols Invictos</div><input class="fi" id="edit-goals-us" type="number" min="0" value="${g.goalsUs||0}"></div>
+          <div><div class="fl">Gols Adversário</div><input class="fi" id="edit-goals-them" type="number" min="0" value="${g.goalsThem||0}"></div>
+        </div>
+        <div class="fg" style="margin-bottom:8px"><label class="fl">Goleadores</label><input class="fi" id="edit-scorers" value="${g.scorers||''}" placeholder="João 2, Pedro 1"></div>
+        <div class="fg" style="margin-bottom:8px"><label class="fl">Assistências</label><input class="fi" id="edit-assists" value="${g.assists||''}" placeholder="Lucas 1, Nairon 1"></div>
+        <div class="fg" style="margin-bottom:10px"><label class="fl">Resultado</label>
+          <select class="fsel" id="edit-status">
+            <option value="vitoria" ${g.status==='vitoria'?'selected':''}>Vitória</option>
+            <option value="empate" ${g.status==='empate'?'selected':''}>Empate</option>
+            <option value="derrota" ${g.status==='derrota'?'selected':''}>Derrota</option>
+          </select>
+        </div>
+        <button class="btn-sub" style="margin-bottom:6px" onclick="salvarEdicaoJogo('${id}')">💾 SALVAR ALTERAÇÕES</button>
+        <button class="btn-can" onclick="document.getElementById('editGameSection').style.display='none'">CANCELAR</button>
+      </div>
+    </div>
+    <button class="btn-can" style="margin-top:10px;border-color:rgba(201,168,76,.4);color:var(--g)" onclick="var s=document.getElementById('editGameSection');s.style.display=s.style.display==='none'?'block':'none'">✏️ EDITAR JOGO</button>`:''}
+    ${isAdmin?`<button class="btn-wa" style="margin-top:8px;background:linear-gradient(135deg,#1a4a8B,#0d2460)" onclick="salvarListaNoJogo('${id}')">💾 SALVAR LISTA E ZERAR PARA PRÓXIMO JOGO</button>`:''}
+    `;
   }
 
   // After game WA note request
@@ -2574,6 +2591,63 @@ window.salvarEZerarLista=async function(){
     var sel=document.getElementById('pag-game-select');
     if(sel)sel.value='';
     renderPagamentos();
+    showToast('✅ Lista salva no jogo! Zerada para o próximo 🦁');
+  }catch(e){showToast('Erro ao salvar lista!');}
+  showSync(false);
+};
+
+// ===== EDITAR JOGO ENCERRADO =====
+window.salvarEdicaoJogo=async function(id){
+  if(!isAdmin){showToast('🔒 Apenas admin!');return;}
+  const g=cache.games.find(x=>x.id===id);if(!g)return;
+  const goalsUs=parseInt(document.getElementById('edit-goals-us').value)||0;
+  const goalsThem=parseInt(document.getElementById('edit-goals-them').value)||0;
+  const scorers=document.getElementById('edit-scorers').value.trim();
+  const assists=document.getElementById('edit-assists').value.trim();
+  const status=document.getElementById('edit-status').value;
+  if(!confirm('Salvar alterações no jogo vs '+g.opponent+'?'))return;
+  showSync(true);
+  try{
+    await setDoc(doc(db,'games',id),Object.assign({},g,{goalsUs,goalsThem,scorers,assists,status}));
+    closeModal('gameDetail');
+    showToast('Jogo atualizado! ✅');
+  }catch(e){showToast('Erro ao salvar!');}
+  showSync(false);
+};
+
+// ===== SALVAR LISTA NO JOGO =====
+window.salvarListaNoJogo=async function(gameId){
+  if(!isAdmin){showToast('🔒 Apenas admin!');return;}
+  const conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
+  const abs=cache.players.filter(function(p){return cache.absent.includes(p.id);});
+  const guests=(cache.guests||[]).filter(function(g){return g.gameId===gameId;});
+  const total=conf.length+guests.length;
+  const nomes=conf.slice(0,5).map(function(p){return p.nick||p.name.split(' ')[0];}).join(', ');
+  const mais=conf.length>5?' e mais '+(conf.length-5)+'...':'';
+  const g=cache.games.find(function(x){return x.id===gameId;});
+  const jogo=g?'⚽ Invictos FC vs '+g.opponent+'\n📅 '+fmtDate(g.date)+'\n\n':'';
+  const confirmou=confirm(
+    '💾 SALVAR LISTA DO JOGO\n\n'+jogo+
+    '✅ Confirmados: '+total+' jogador'+(total!==1?'es':'')+'\n'+
+    (nomes?'👥 '+nomes+mais+'\n':'')+
+    '❌ Ausentes: '+abs.length+'\n\n'+
+    '⚠️ A lista será salva e zerada para o próximo jogo.\n\nDeseja continuar?'
+  );
+  if(!confirmou)return;
+  showSync(true);
+  try{
+    var jogoPatch={
+      listaConfirmados:cache.confirmed.slice(),
+      listaAusentes:cache.absent.slice(),
+      listaSalvaEm:Date.now(),
+      pagamentosJogo:{}
+    };
+    await setDoc(doc(db,'games',gameId),Object.assign({},g,jogoPatch));
+    var b=writeBatch(db);
+    cache.confirmed.forEach(function(id){b.delete(doc(db,'confirmed',id));});
+    cache.absent.forEach(function(id){b.delete(doc(db,'absent',id));});
+    await b.commit();
+    closeModal('gameDetail');
     showToast('✅ Lista salva no jogo! Zerada para o próximo 🦁');
   }catch(e){showToast('Erro ao salvar lista!');}
   showSync(false);
