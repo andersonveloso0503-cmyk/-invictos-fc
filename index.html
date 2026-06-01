@@ -902,29 +902,72 @@ window.openGameDetail=function(id){window._currentGameId=id;
     ${scoreHTML}
     ${g.scorers?`<div class="ginf" style="margin-top:8px">⚽ <span>Gols:</span> ${g.scorers}</div>`:''}
     ${g.assists?`<div class="ginf">🎯 <span>Ass.:</span> ${g.assists}</div>`:''}
-    ${confPlayers.length>0?`
-      <div style="margin-top:12px">
-        <div class="fl" style="margin-bottom:6px">✅ CONFIRMADOS (${confPlayers.length})</div>
-        <div style="display:flex;flex-wrap:wrap">${confPlayers.map(function(p){var pav=p.photo?'<img src="'+p.photo+'" style="width:18px;height:18px;border-radius:50%;object-fit:cover">':'<span style="font-size:.75rem">'+(p.emoji||'\u26bd')+'</span>';return'<div class="conf-chip">'+pav+(p.nick||p.name.split(' ')[0])+'</div>';}).join('')}</div>
-      </div>`:'' }
-    ${absentPlayers.length>0?`
-      <div style="margin-top:8px">
-        <div class="fl" style="margin-bottom:6px">❌ AUSENTES (${absentPlayers.length})</div>
-        <div style="display:flex;flex-wrap:wrap">${absentPlayers.map(p=>`<div class="abs-chip">${p.nick||p.name.split(' ')[0]}</div>`).join('')}</div>
-      </div>`:'' }
+    <div style="margin-top:12px" id="modalConfirmadosBox">
+      <div class="fl" style="margin-bottom:6px" id="modalConfCount">✅ CONFIRMADOS (0)</div>
+      <div style="display:flex;flex-wrap:wrap" id="modalConfChips"></div>
+    </div>
+    <div style="margin-top:8px" id="modalAusentesBox" style="display:none">
+      <div class="fl" style="margin-bottom:6px" id="modalAbsCount">❌ AUSENTES (0)</div>
+      <div style="display:flex;flex-wrap:wrap" id="modalAbsChips"></div>
+    </div>
     ${waAfter}
     ${g.status==='agendado'?`
     <div style="margin-top:14px;background:var(--s2);border:1px solid rgba(201,168,76,.35);border-radius:11px;padding:12px 13px">
       <div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:7px">🔗 LINK DE CONFIRMAÇÃO DE PRESENÇA</div>
       <div style="font-family:monospace;font-size:.65rem;color:var(--tm);word-break:break-all;line-height:1.5;margin-bottom:9px;background:var(--s);border-radius:6px;padding:7px 9px">https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo=${id}</div>
-      <div style="display:flex;gap:7px">
+      <div style="display:flex;gap:7px;margin-bottom:7px">
         <button onclick="copiarLinkConf('${id}')" style="flex:1;padding:9px;background:var(--s);border:1px solid var(--br);border-radius:8px;color:var(--g);font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:1px;cursor:pointer">📋 COPIAR LINK</button>
         <button onclick="compartilharLinkConf('${id}')" style="flex:1;padding:9px;background:linear-gradient(135deg,#25D366,#128C7E);border:none;border-radius:8px;color:#fff;font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:1px;cursor:pointer">📲 ENVIAR NO WA</button>
       </div>
+      <button onclick="enviarListaConfirmadosWA('${id}')" style="width:100%;padding:10px;background:linear-gradient(135deg,#1a5c2a,#0d3318);border:1px solid rgba(74,222,128,.3);border-radius:8px;color:#4ADE80;font-family:'Cinzel',serif;font-size:.65rem;font-weight:700;letter-spacing:1px;cursor:pointer">📋 ENVIAR LISTA DE CONFIRMADOS NO WA</button>
     </div>`:''}
   `;
   openModal('gameDetail');
-  // Add guest section to modal
+
+  // Listener em tempo real dos confirmados por jogo
+  if(window._modalConfUnsub) window._modalConfUnsub();
+  if(window._modalAbsUnsub) window._modalAbsUnsub();
+
+  function updateModalConfirmados(confIds, absIds){
+    var guests=(cache.guests||[]).filter(function(gg){return gg.gameId===id;});
+    var confPlayers=cache.players.filter(function(p){return confIds.includes(p.id);});
+    var absentPlayers=cache.players.filter(function(p){return absIds.includes(p.id);});
+    var total=confPlayers.length+guests.length;
+
+    var countEl=document.getElementById('modalConfCount');
+    var chipsEl=document.getElementById('modalConfChips');
+    var absCountEl=document.getElementById('modalAbsCount');
+    var absChipsEl=document.getElementById('modalAbsChips');
+    var absBox=document.getElementById('modalAusentesBox');
+    if(!countEl)return;
+
+    countEl.textContent='✅ CONFIRMADOS ('+(total)+')';
+    chipsEl.innerHTML=confPlayers.map(function(p){
+      var pav=p.photo?'<img src="'+p.photo+'" style="width:18px;height:18px;border-radius:50%;object-fit:cover">':'<span style="font-size:.75rem">'+(p.emoji||'⚽')+'</span>';
+      return'<div class="conf-chip">'+pav+(p.nick||p.name.split(' ')[0])+'</div>';
+    }).join('')+guests.map(function(gg){
+      return'<div class="conf-chip" style="border-color:rgba(171,71,188,.5);background:rgba(171,71,188,.1)">🎟️ '+gg.name+'</div>';
+    }).join('');
+
+    if(absentPlayers.length>0){
+      if(absBox)absBox.style.display='block';
+      if(absCountEl)absCountEl.textContent='❌ AUSENTES ('+absentPlayers.length+')';
+      if(absChipsEl)absChipsEl.innerHTML=absentPlayers.map(function(p){return'<div class="abs-chip">'+(p.nick||p.name.split(' ')[0])+'</div>';}).join('');
+    }else{
+      if(absBox)absBox.style.display='none';
+    }
+  }
+
+  var _modalConf=[];
+  var _modalAbs=[];
+  window._modalConfUnsub=onSnapshot(collection(db,'confirmed_'+id),function(snap){
+    _modalConf=snap.docs.map(function(d){return d.id;});
+    updateModalConfirmados(_modalConf,_modalAbs);
+  });
+  window._modalAbsUnsub=onSnapshot(collection(db,'absent_'+id),function(snap){
+    _modalAbs=snap.docs.map(function(d){return d.id;});
+    updateModalConfirmados(_modalConf,_modalAbs);
+  });
   var gc=document.getElementById('gameDetailContent');
   if(gc){
     var guests=(cache.guests||[]).filter(function(g){return g.gameId===id;});
@@ -2651,6 +2694,37 @@ window.salvarListaNoJogo=async function(gameId){
     showToast('✅ Lista salva no jogo! Zerada para o próximo 🦁');
   }catch(e){showToast('Erro ao salvar lista!');}
   showSync(false);
+};
+
+// ===== ENVIAR LISTA CONFIRMADOS WA =====
+window.enviarListaConfirmadosWA=async function(gameId){
+  const g=cache.games.find(x=>x.id===gameId);if(!g)return;
+  var confSnap=await getDocs(collection(db,'confirmed_'+gameId));
+  var confIds=confSnap.docs.map(function(d){return d.id;});
+  var confPlayers=cache.players.filter(function(p){return confIds.includes(p.id);});
+  var guests=(cache.guests||[]).filter(function(gg){return gg.gameId===gameId;});
+  var total=confPlayers.length+guests.length;
+
+  if(total===0){showToast('Nenhum confirmado ainda!');return;}
+
+  function fmtD(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+
+  var lista='';
+  confPlayers.forEach(function(p,i){lista+=(i+1)+'. '+(p.nick||p.name.split(' ')[0])+'\n';});
+  guests.forEach(function(gg,i){lista+=(confPlayers.length+i+1)+'. 🎟️ '+gg.name+' (conv.)\n';});
+
+  var msg='⚽ *INVICTOS FC — LISTA DO JOGO*\n\n';
+  msg+='🏆 Invictos FC vs '+g.opponent+'\n';
+  if(g.date)msg+='📅 '+fmtD(g.date);
+  if(g.time)msg+=' · 🕐 '+g.time+'h';
+  if(g.date||g.time)msg+='\n';
+  if(g.location)msg+='📍 '+g.location+'\n';
+  msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
+  msg+='\n👇 Ainda não confirmou? Clique no link:\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
+  msg+='🦁 _Invictos FC — Nunca Rendidos!_';
+
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
 init();
