@@ -71,9 +71,12 @@ async function init(){
     document.getElementById('og-desc').content=desc;
     document.getElementById('og-url').content=confirmUrl;
 
-    // Gera imagem do confronto
-    const imgData=await gerarImagem(g.opponent, g.logoAdversario||'', g.date, g.time);
-    document.getElementById('og-image').content=imgData;
+    // Usa ogImage salvo pelo admin (URL do Imgur) ou tenta gerar
+    if(g.ogImage){
+      document.getElementById('og-image').content=g.ogImage;
+    }else if(g.logoAdversario){
+      document.getElementById('og-image').content=g.logoAdversario;
+    }
 
     // Redireciona para confirmar.html
     setTimeout(()=>{window.location.href=confirmUrl;},800);
@@ -223,7 +226,6 @@ function roundRect(ctx,x,y,w,h,r){
   ctx.closePath();
 }
 
-function fmtDate(d){if(!d)return'';const[y,m,day]=d.split('-');return day+'/'+m+'/'+y;}
 function redirect(url){window.location.href=url||'https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html';}
 
 init();
