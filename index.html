@@ -472,6 +472,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div class="mh"></div>
     <div class="mt2">⚽ REGISTRAR JOGO</div>
     <div class="fg"><label class="fl">Adversário</label><input class="fi" id="g-opponent" placeholder="Nome do time adversário"></div>
+    <div class="fg"><label class="fl">Logo do Adversário (URL)</label><input class="fi" id="g-logo-adv" placeholder="https://i.imgur.com/...jpg" type="url"></div>
     <div class="frow">
       <div class="fg"><label class="fl">Data</label><input class="fi" id="g-date" type="date"></div>
       <div class="fg"><label class="fl">Horário</label><input class="fi" id="g-time" type="time"></div>
@@ -1248,7 +1249,7 @@ window.saveGame=async function(){
     const id='g'+Date.now();
     const notas=collectNotas();
     const st=document.getElementById('g-status').value;
-    await setDoc(doc(db,'games',id),{id,opponent:opp,date:document.getElementById('g-date').value,time:document.getElementById('g-time').value,location:document.getElementById('g-location').value,status:st,goalsUs:parseInt(document.getElementById('g-goals-us').value)||0,goalsThem:parseInt(document.getElementById('g-goals-them').value)||0,scorers:document.getElementById('g-scorers').value,assists:document.getElementById('g-assists').value,notes:document.getElementById('g-notes').value,notas});
+    await setDoc(doc(db,'games',id),{id,opponent:opp,date:document.getElementById('g-date').value,time:document.getElementById('g-time').value,location:document.getElementById('g-location').value,logoAdversario:document.getElementById('g-logo-adv').value.trim(),status:st,goalsUs:parseInt(document.getElementById('g-goals-us').value)||0,goalsThem:parseInt(document.getElementById('g-goals-them').value)||0,scorers:document.getElementById('g-scorers').value,assists:document.getElementById('g-assists').value,notes:document.getElementById('g-notes').value,notas});
     closeModal('addGame');
     if(st==='vitoria'){
       showVictoryBanner({
@@ -1262,7 +1263,7 @@ window.saveGame=async function(){
     }else{
       showToast('Jogo salvo! ⚽');
     }
-    ['g-opponent','g-location','g-time','g-scorers','g-assists','g-notes'].forEach(i=>document.getElementById(i).value='');
+    ['g-opponent','g-logo-adv','g-location','g-time','g-scorers','g-assists','g-notes'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('g-goals-us').value=0;document.getElementById('g-goals-them').value=0;
   }catch(e){showToast('Erro ao salvar!');}
   showSync(false);
@@ -1598,7 +1599,7 @@ window.convocarWA=function(){
   var confirmed=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
   var today=todayStr();
   var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
-  var confLink=nextGame?'https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+nextGame.id:'';
+  var confLink=nextGame?'https://andersonveloso0503-cmyk.github.io/-invictos-fc/match.html?jogo='+nextGame.id:'';
   var nl='\n';
   var lista='';
   for(var i=1;i<=17;i++){var p=confirmed[i-1];lista+=(i)+'. '+(p?(p.nick||p.name)+' OK':'')+nl;}
@@ -2034,7 +2035,7 @@ window.convocarGrupo=function(){
   var valor=document.getElementById('wa-valor').value.trim();
   var today=todayStr();
   var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
-  var confLink=nextGame?'https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+nextGame.id:'';
+  var confLink=nextGame?'https://andersonveloso0503-cmyk.github.io/-invictos-fc/match.html?jogo='+nextGame.id:'';
   var nl='\n';
   var msg='INVICTOS FC - CONVOCAÇÃO'+nl+nl;
   msg+='⚔️ Invictos FC vs '+op+nl;
@@ -2534,7 +2535,7 @@ function stopVictoryConfetti(){
 }
 // ===== LINK DE CONFIRMAÇÃO =====
 window.copiarLinkConf=function(gameId){
-  var link='https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId;
+  var link='https://andersonveloso0503-cmyk.github.io/-invictos-fc/match.html?jogo='+gameId;
   if(navigator.clipboard){
     navigator.clipboard.writeText(link).then(function(){showToast('Link copiado! 📋');}).catch(function(){_copyLinkFallback(link);});
   }else{_copyLinkFallback(link);}
@@ -2549,7 +2550,7 @@ window.compartilharLinkConf=function(gameId,opp,date,time,loc){
   var g=cache.games.find(function(x){return x.id===gameId;});
   if(g&&!opp){opp=g.opponent;date=g.date;time=g.time;loc=g.location;}
   var addr=g?g.address:'';
-  var link='https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId;
+  var matchLink='https://andersonveloso0503-cmyk.github.io/-invictos-fc/match.html?jogo='+gameId;
   function fmtD(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
   var msg='⚽ *INVICTOS FC — CONFIRME SUA PRESENÇA!*\n\n';
   msg+='🏆 Invictos FC vs '+opp+'\n';
@@ -2558,10 +2559,10 @@ window.compartilharLinkConf=function(gameId,opp,date,time,loc){
   if(date||time)msg+='\n';
   if(loc)msg+='📍 '+loc+'\n';
   if(addr)msg+='📌 '+addr+'\n';
-  if(addr)msg+='🗺️ https://maps.google.com/?q='+encodeURIComponent(addr)+'\n';
   msg+='\n👇 *Clique no link, escolha seu nome e confirme:*\n\n';
-  msg+='🔗 '+link+'\n\n';
-  msg+='✅ Confirme e avise no grupo!\n';
+  msg+='🔗 '+matchLink+'\n';
+  if(addr)msg+='\n🗺️ Como chegar: https://maps.google.com/?q='+encodeURIComponent(addr)+'\n';
+  msg+='\n✅ Confirme e avise no grupo!\n';
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
@@ -2722,7 +2723,7 @@ window.enviarListaConfirmadosWA=async function(gameId){
   if(g.address)msg+='🗺️ https://maps.google.com/?q='+encodeURIComponent(g.address)+'\n';
   msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
   msg+='\n👇 Ainda não confirmou? Clique no link:\n';
-  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/match.html?jogo='+gameId+'\n';
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
 
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
