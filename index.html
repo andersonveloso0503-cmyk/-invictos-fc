@@ -2788,29 +2788,50 @@ window.gerarImagemConfrontoModal=async function(gameId){
   }
 
   async function desenharImagem(src,x,y,w,h,borderColor){
-    return new Promise(function(resolve){
-      var img=new Image();
-      img.onload=function(){
-        ctx.save();ctx.beginPath();roundRect(ctx,x,y,w,h,16);ctx.clip();
-        ctx.drawImage(img,x,y,w,h);ctx.restore();
-        ctx.strokeStyle=borderColor||'rgba(255,255,255,0.3)';ctx.lineWidth=3;
-        ctx.beginPath();roundRect(ctx,x,y,w,h,16);ctx.stroke();resolve();
-      };
-      img.onerror=function(){
-        // Tenta via proxy CORS
-        var proxy='https://corsproxy.io/?'+encodeURIComponent(src);
-        var img2=new Image();
-        img2.onload=function(){
+    // Tenta carregar via fetch+base64 para contornar CORS
+    async function carregarBase64(url){
+      var proxies=['https://corsproxy.io/?'+encodeURIComponent(url),'https://api.allorigins.win/raw?url='+encodeURIComponent(url)];
+      for(var p of proxies){
+        try{
+          var resp=await fetch(p);
+          if(!resp.ok)continue;
+          var blob=await resp.blob();
+          return await new Promise(function(res){
+            var r=new FileReader();
+            r.onload=function(){res(r.result);};
+            r.readAsDataURL(blob);
+          });
+        }catch(e){}
+      }
+      return null;
+    }
+    return new Promise(async function(resolve){
+      function desenhar(imgSrc){
+        var img=new Image();
+        img.onload=function(){
           ctx.save();ctx.beginPath();roundRect(ctx,x,y,w,h,16);ctx.clip();
-          ctx.drawImage(img2,x,y,w,h);ctx.restore();
+          ctx.drawImage(img,x,y,w,h);ctx.restore();
           ctx.strokeStyle=borderColor||'rgba(255,255,255,0.3)';ctx.lineWidth=3;
           ctx.beginPath();roundRect(ctx,x,y,w,h,16);ctx.stroke();resolve();
         };
-        img2.onerror=resolve;
-        img2.crossOrigin='anonymous';
-        img2.src=proxy;
+        img.onerror=resolve;
+        img.src=imgSrc;
+      }
+      // Primeiro tenta direto (funciona para base64 e imagens com CORS aberto)
+      var imgDireto=new Image();
+      imgDireto.crossOrigin='anonymous';
+      imgDireto.onload=function(){
+        ctx.save();ctx.beginPath();roundRect(ctx,x,y,w,h,16);ctx.clip();
+        ctx.drawImage(imgDireto,x,y,w,h);ctx.restore();
+        ctx.strokeStyle=borderColor||'rgba(255,255,255,0.3)';ctx.lineWidth=3;
+        ctx.beginPath();roundRect(ctx,x,y,w,h,16);ctx.stroke();resolve();
       };
-      img.crossOrigin='anonymous';img.src=src;
+      imgDireto.onerror=async function(){
+        // Fallback: fetch via proxy → base64
+        var b64=await carregarBase64(src);
+        if(b64){desenhar(b64);}else{resolve();}
+      };
+      imgDireto.src=src;
     });
   }
 
