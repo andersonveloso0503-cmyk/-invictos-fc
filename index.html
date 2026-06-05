@@ -2721,11 +2721,11 @@ window.enviarListaConfirmadosWA=async function(gameId){
   if(g.date||g.time)msg+='\n';
   if(g.location)msg+='📍 '+g.location+'\n';
   if(g.address)msg+='📌 '+g.address+'\n';
-  if(g.address)msg+='🗺️ https://maps.google.com/?q='+encodeURIComponent(g.address)+'\n';
   msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
   msg+='\n👇 Ainda não confirmou? Clique no link:\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/match.html?jogo='+gameId+'\n';
-  msg+='🦁 _Invictos FC — Nunca Rendidos!_';
+  if(g.address)msg+='\n🗺️ Como chegar: https://maps.google.com/?q='+encodeURIComponent(g.address)+'\n';
+  msg+='\n🦁 _Invictos FC — Nunca Rendidos!_';
 
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
