@@ -445,6 +445,22 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div class="sm"><div class="n" style="color:#FACC15;font-size:.95rem" id="pag-total-falta">R$ 0</div><div class="l">A receber</div></div>
   </div>
 
+  <!-- Valor do campo e saldo -->
+  <div style="background:var(--s2);border:1px solid var(--br);border-radius:10px;padding:11px;margin-bottom:12px">
+    <div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:8px">💰 FINANCEIRO DO JOGO</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <div style="flex:1">
+        <div style="font-size:.62rem;color:var(--tm);margin-bottom:4px">Valor do campo (R$)</div>
+        <input class="fi" id="pag-valor-campo" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcularSaldo()" style="padding:8px">
+      </div>
+      <div style="flex:1">
+        <div style="font-size:.62rem;color:var(--tm);margin-bottom:4px">Saldo da equipe (R$)</div>
+        <input class="fi" id="pag-saldo-equipe" type="number" step="0.01" placeholder="0,00" oninput="calcularSaldo()" style="padding:8px">
+      </div>
+    </div>
+    <div id="pag-resultado-financeiro" style="font-size:.72rem;color:var(--tm);text-align:center;min-height:18px"></div>
+  </div>
+
   <!-- Lista de jogadores -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
     <div class="sh" style="margin-bottom:0;flex:1"><h2>LISTA DE PAGAMENTOS</h2><div class="sl"></div></div>
@@ -452,9 +468,10 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
   </div>
   <div id="pag-list"></div>
 
-  <!-- Botão WhatsApp -->
-  <div style="margin-top:11px">
+  <!-- Botões -->
+  <div style="margin-top:11px;display:flex;flex-direction:column;gap:8px">
     <button class="btn-wa" onclick="compartilharPagamentosWA()"><span>📲</span> ENVIAR COBRANÇA NO WHATSAPP</button>
+    <button class="btn-wa" style="background:linear-gradient(135deg,#1a4a8B,#0d2460)" onclick="enviarRelatorioFinanceiroWA()"><span>📊</span> ENVIAR RELATÓRIO FINANCEIRO</button>
   </div>
 </div>
 
@@ -475,7 +492,8 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div class="fg"><label class="fl">Logo do Adversário (URL)</label><input class="fi" id="g-logo-adv" placeholder="https://i.imgur.com/...jpg" type="url"></div>
     <div class="frow">
       <div class="fg"><label class="fl">Data</label><input class="fi" id="g-date" type="date"></div>
-      <div class="fg"><label class="fl">Horário</label><input class="fi" id="g-time" type="time"></div>
+      <div class="fg"><label class="fl">Horário início</label><input class="fi" id="g-time" type="time"></div>
+      <div class="fg"><label class="fl">Horário término</label><input class="fi" id="g-time-end" type="time"></div>
     </div>
     <div class="fg"><label class="fl">Local</label><input class="fi" id="g-location" placeholder="Nome do campo"></div>
     <div class="fg"><label class="fl">Status</label>
@@ -897,7 +915,8 @@ window.openGameDetail=function(id){window._currentGameId=id;
       ${isAdmin?'<div>'
       +'<div style="display:flex;gap:6px;margin-bottom:5px">'
       +'<input class="fi" id="gd-date" value="'+(g.date||'')+'" type="date" style="flex:1">'
-      +'<input class="fi" id="gd-time" value="'+(g.time||'')+'" type="time" style="width:110px">'
+      +'<input class="fi" id="gd-time" value="'+(g.time||'')+'" type="time" style="width:90px">'
+      +'<input class="fi" id="gd-time-end" value="'+(g.timeEnd||'')+'" type="time" style="width:90px">'
       +'</div>'
       +'<input class="fi" id="gd-loc" value="'+(g.location||'')+'" placeholder="Nome do campo" style="margin-bottom:5px"><input class="fi" id="gd-addr" value="'+(g.address||'')+'" placeholder="Endereço (ex: Rua X 100, Viamão)" style="margin-bottom:5px">'
       +'<div style="margin-bottom:5px"><div style="font-size:.6rem;color:var(--g);letter-spacing:1px;margin-bottom:4px">🛡️ LOGO DO ADVERSÁRIO</div>'
@@ -1051,7 +1070,8 @@ window.saveGameLocation=async function(id){
     const dateVal=document.getElementById('gd-date')?document.getElementById('gd-date').value:'';
     const timeVal=document.getElementById('gd-time')?document.getElementById('gd-time').value:'';
     const ogImage=document.getElementById('gd-og-image')?document.getElementById('gd-og-image').value.trim():'';
-    const updates=Object.assign({},g,{location:loc,address:addr,logoAdversario:logoAdv,ogImage:ogImage});
+    const timeEndVal=document.getElementById('gd-time-end')?document.getElementById('gd-time-end').value:'';
+    const updates=Object.assign({},g,{location:loc,address:addr,logoAdversario:logoAdv,ogImage:ogImage,timeEnd:timeEndVal});
     if(dateVal)updates.date=dateVal;
     if(timeVal!==undefined)updates.time=timeVal;
     await setDoc(doc(db,'games',id),updates);
@@ -1259,7 +1279,7 @@ window.saveGame=async function(){
     const id='g'+Date.now();
     const notas=collectNotas();
     const st=document.getElementById('g-status').value;
-    await setDoc(doc(db,'games',id),{id,opponent:opp,date:document.getElementById('g-date').value,time:document.getElementById('g-time').value,location:document.getElementById('g-location').value,logoAdversario:document.getElementById('g-logo-adv').value.trim(),status:st,goalsUs:parseInt(document.getElementById('g-goals-us').value)||0,goalsThem:parseInt(document.getElementById('g-goals-them').value)||0,scorers:document.getElementById('g-scorers').value,assists:document.getElementById('g-assists').value,notes:document.getElementById('g-notes').value,notas});
+    await setDoc(doc(db,'games',id),{id,opponent:opp,date:document.getElementById('g-date').value,time:document.getElementById('g-time').value,timeEnd:document.getElementById('g-time-end').value,location:document.getElementById('g-location').value,logoAdversario:document.getElementById('g-logo-adv').value.trim(),status:st,goalsUs:parseInt(document.getElementById('g-goals-us').value)||0,goalsThem:parseInt(document.getElementById('g-goals-them').value)||0,scorers:document.getElementById('g-scorers').value,assists:document.getElementById('g-assists').value,notes:document.getElementById('g-notes').value,notas});
     closeModal('addGame');
     if(st==='vitoria'){
       showVictoryBanner({
@@ -2884,6 +2904,65 @@ window.carregarLogoAdv=function(input){
     showToast('✅ Logo carregado!');
   };
   reader.readAsDataURL(file);
+};
+
+// ===== FINANCEIRO =====
+window.calcularSaldo=function(){
+  var valorCampo=parseFloat(document.getElementById('pag-valor-campo').value)||0;
+  var saldoEquipe=parseFloat(document.getElementById('pag-saldo-equipe').value)||0;
+  var arrecadado=parseFloat((document.getElementById('pag-total-pago').textContent||'').replace('R$','').replace(',','.').trim())||0;
+  var resultado=document.getElementById('pag-resultado-financeiro');
+  if(!resultado)return;
+  if(valorCampo>0){
+    var totalDisp=arrecadado+saldoEquipe;
+    var diff=totalDisp-valorCampo;
+    if(diff>=0){
+      resultado.innerHTML='<span style="color:#4ADE80">✅ Saldo positivo: R$ '+diff.toFixed(2).replace('.',',')+'</span>';
+    }else{
+      resultado.innerHTML='<span style="color:#F87171">⚠️ Faltam: R$ '+Math.abs(diff).toFixed(2).replace('.',',')+'</span>';
+    }
+  }else{
+    resultado.textContent='';
+  }
+};
+
+window.enviarRelatorioFinanceiroWA=function(){
+  var nextGame=cache.games.filter(function(g){return g.status==='agendado';}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var g=nextGame;
+  var valorCampo=parseFloat(document.getElementById('pag-valor-campo').value)||0;
+  var saldoEquipe=parseFloat(document.getElementById('pag-saldo-equipe').value)||0;
+  var numPago=parseInt(document.getElementById('pag-num-pago').textContent)||0;
+  var numFalta=parseInt(document.getElementById('pag-num-falta').textContent)||0;
+  var totalPago=document.getElementById('pag-total-pago').textContent||'R$ 0';
+  var totalFalta=document.getElementById('pag-total-falta').textContent||'R$ 0';
+
+  function fmtD(d){if(!d)return'';var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+
+  var msg='📊 *RELATÓRIO FINANCEIRO — INVICTOS FC*\n\n';
+  if(g){
+    msg+='⚽ Invictos FC vs '+g.opponent+'\n';
+    if(g.date)msg+='📅 '+fmtD(g.date);
+    if(g.time)msg+=' · 🕐 '+g.time+'h';
+    if(g.timeEnd)msg+=' às '+g.timeEnd+'h';
+    if(g.date||g.time)msg+='\n';
+    if(g.location)msg+='📍 '+g.location+'\n';
+  }
+  msg+='\n💰 *PAGAMENTOS:*\n';
+  msg+='✅ Pagaram: '+numPago+' jogadores ('+totalPago+')\n';
+  msg+='⏳ Faltam pagar: '+numFalta+' jogadores ('+totalFalta+')\n';
+  if(valorCampo>0)msg+='\n🏟️ Valor do campo: R$ '+valorCampo.toFixed(2).replace('.',',')+'\n';
+  if(saldoEquipe>0)msg+='💼 Saldo da equipe: R$ '+saldoEquipe.toFixed(2).replace('.',',')+'\n';
+  if(valorCampo>0){
+    var arrecadado=parseFloat(totalPago.replace('R$','').replace(',','.').trim())||0;
+    var diff=(arrecadado+saldoEquipe)-valorCampo;
+    if(diff>=0)msg+='\n✅ Saldo final: R$ '+diff.toFixed(2).replace('.',',')+'\n';
+    else msg+='\n⚠️ Déficit: R$ '+Math.abs(diff).toFixed(2).replace('.',',')+'\n';
+  }
+  msg+='\n👇 Por favor, anote no app quem pagou:\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/\n\n';
+  msg+='🦁 _Invictos FC — Nunca Rendidos!_';
+
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
 init();
