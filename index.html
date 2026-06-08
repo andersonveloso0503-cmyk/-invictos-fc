@@ -2288,6 +2288,8 @@ function renderPagamentos(){
   document.getElementById('pag-num-falta').textContent=faltam;
   document.getElementById('pag-total-pago').textContent=valor?'R$ '+(pagaram*valor).toFixed(2).replace('.',','):'—';
   document.getElementById('pag-total-falta').textContent=valor?'R$ '+(faltam*valor).toFixed(2).replace('.',','):'—';
+  // Atualiza cálculo financeiro automaticamente
+  if(window.calcularSaldo)window.calcularSaldo();
   if(total===0){el.innerHTML='<div class="es"><div class="ei">💰</div><p>Nenhum jogador confirmado ainda</p></div>';return;}
   var h='';
   if(confirmedPlayers.length>0){
@@ -2918,6 +2920,16 @@ window.carregarLogoAdv=function(input){
 window.calcularSaldo=function(){
   var valorCampo=parseFloat(document.getElementById('pag-valor-campo').value)||0;
   var saldoEquipe=parseFloat(document.getElementById('pag-saldo-equipe').value)||0;
+  var total=parseInt(document.getElementById('pag-num-pago').textContent||'0')+(parseInt(document.getElementById('pag-num-falta').textContent||'0'));
+  // Auto-calcula valor por jogador
+  if(valorCampo>0&&total>0){
+    var valorPorJog=valorCampo/total;
+    var elValor=document.getElementById('pag-valor');
+    if(elValor&&!elValor.value){
+      elValor.value=valorPorJog.toFixed(2);
+      renderPagamentos();
+    }
+  }
   var arrecadado=parseFloat((document.getElementById('pag-total-pago').textContent||'').replace('R$','').replace(',','.').trim())||0;
   var resultado=document.getElementById('pag-resultado-financeiro');
   if(!resultado)return;
