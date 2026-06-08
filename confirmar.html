@@ -234,8 +234,8 @@ function renderPage(){
     <!-- TABS -->
     ${!isEncerrado?`
     <div class="tab-bar">
-      <button class="tab-btn active" id="tab-btn-jogador" onclick="switchTab('jogador')">👤 SOU JOGADOR</button>
-      <button class="tab-btn" id="tab-btn-convidado" onclick="switchTab('convidado')">🎟️ CONVIDADO</button>
+      <button class="tab-btn active" id="tab-btn-jogador" onclick="switchTab('jogador')" style="background:linear-gradient(135deg,#8B1A1A,#5C0E0E);color:#F0C040;border:1px solid rgba(201,168,76,.5);font-size:.75rem;padding:11px 4px">👤 SOU JOGADOR</button>
+      <button class="tab-btn" id="tab-btn-convidado" onclick="switchTab('convidado')" style="border:1px solid rgba(171,71,188,.4);color:#CE93D8;font-size:.75rem;padding:11px 4px">🎟️ SOU CONVIDADO</button>
     </div>`:''} 
 
     <!-- TAB JOGADOR -->
@@ -266,7 +266,8 @@ function renderPage(){
       <div class="sh"><h2>SEUS DADOS</h2><div class="sl"></div></div>
       <input class="fi" id="guest-name" placeholder="Seu nome completo">
       <input class="fi" id="guest-pos" placeholder="Posição (ex: Atacante)" style="margin-top:8px">
-      <button class="btn-confirm" style="margin-top:14px" onclick="confirmarConvidado()"><span>📲</span> SALVAR E AVISAR NO WHATSAPP</button>
+      <button class="btn-confirm" style="margin-top:14px;background:linear-gradient(135deg,#7B1FA2,#4A148C)" onclick="confirmarConvidado()"><span>📲</span> CONFIRMAR E AVISAR NO WHATSAPP</button>
+      <button class="btn-confirm" style="margin-top:8px;background:linear-gradient(135deg,#1a5c2a,#0d3318);border:1px solid rgba(74,222,128,.3);color:#4ADE80" onclick="enviarListaConvidadoWA()"><span>📋</span> ENVIAR LISTA DE CONFIRMADOS</button>
     </div>
 
     <!-- LISTA CONFIRMADOS -->
@@ -286,6 +287,8 @@ function renderPage(){
     ${!isEncerrado?`
     <div style="margin-top:18px">
       <button class="btn-confirm" onclick="confirmar()"><span>📲</span> CONFIRMAR E AVISAR NO WHATSAPP</button>
+      <div style="text-align:center;margin:10px 0 6px;font-size:.7rem;color:var(--tm)">Não é jogador do elenco?</div>
+      <button class="btn-confirm" style="background:linear-gradient(135deg,#7B1FA2,#4A148C);margin-bottom:8px" onclick="switchTab('convidado');document.getElementById('tab-convidado-content').scrollIntoView({behavior:'smooth'})"><span>🎟️</span> ENTRAR COMO CONVIDADO</button>
       <button class="btn-cancel-pres" onclick="cancelar()">❌ CANCELAR MINHA PRESENÇA</button>
     </div>`:``}
   `;
@@ -427,6 +430,30 @@ window.confirmar=async function(){
 window.confirmarConvidado=async function(){
   if(currentTab!=='convidado') currentTab='convidado';
   await window.confirmar();
+};
+
+window.enviarListaConvidadoWA=function(){
+  const confPlayers=players.filter(x=>confirmed.includes(x.id));
+  const guestList=(guests||[]);
+  const total=confPlayers.length+guestList.length;
+  if(total===0){showToast('Nenhum confirmado ainda!');return;}
+  function fmtD(d){if(!d)return'';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+  let lista='';
+  confPlayers.forEach((p,i)=>{lista+=(i+1)+'. '+(p.nick||p.name.split(' ')[0])+'\n';});
+  guestList.forEach((g,i)=>{lista+=(confPlayers.length+i+1)+'. 🎟️ '+g.name+' (conv.)\n';});
+  let msg='⚽ *INVICTOS FC — LISTA DO JOGO*\n\n';
+  if(gameData){
+    msg+='🏆 Invictos FC vs '+gameData.opponent+'\n';
+    if(gameData.date)msg+='📅 '+fmtD(gameData.date);
+    if(gameData.time)msg+=' · 🕐 '+gameData.time+'h';
+    if(gameData.date||gameData.time)msg+='\n';
+    if(gameData.location)msg+='📍 '+gameData.location+'\n';
+  }
+  msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
+  msg+='\n👇 Ainda não confirmou?\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
+  msg+='🦁 _Invictos FC — Nunca Rendidos!_';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
 window.cancelar=async function(){
