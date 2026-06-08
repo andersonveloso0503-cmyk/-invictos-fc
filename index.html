@@ -2253,11 +2253,19 @@ function renderPagamentos(){
         sel.appendChild(grpH);
       }
     }
-    // Auto-seleciona próximo jogo se nenhum selecionado
-    if(!_pagGameId&&agendados.length>0){
-      sel.value=agendados[0].id;
-      onPagGameChange();
-      return; // onPagGameChange vai chamar renderPagamentos de novo
+    // Auto-seleciona próximo jogo agendado ou jogo mais recente
+    if(!_pagGameId){
+      var autoId=agendados.length>0?agendados[0].id:(comResultado.length>0?comResultado[0].id:'');
+      if(autoId){
+        sel.value=autoId;
+        onPagGameChange();
+        return;
+      }
+    }
+    // Mantém jogo selecionado mesmo após mudança de status
+    if(_pagGameId&&sel.value!==_pagGameId){
+      var exists=[].concat(agendados,comResultado).find(function(g){return g.id===_pagGameId;});
+      if(exists)sel.value=_pagGameId;
     }
   }
   var valor=parseFloat(document.getElementById('pag-valor')?document.getElementById('pag-valor').value:'')||0;
