@@ -2967,7 +2967,9 @@ window.calcularSaldo=function(){
 };
 
 window.enviarRelatorioFinanceiroWA=function(){
-  var nextGame=cache.games.filter(function(g){return g.status==='agendado';}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  if(!_pagGameId){showToast('Selecione um jogo primeiro!');return;}
+  var nextGame=cache.games.find(function(g){return g.id===_pagGameId;});
+  if(!nextGame){showToast('Jogo não encontrado!');return;}
   var g=nextGame;
   var valorCampo=parseFloat(document.getElementById('pag-valor-campo').value)||0;
   var saldoEquipe=parseFloat(document.getElementById('pag-saldo-equipe').value)||0;
