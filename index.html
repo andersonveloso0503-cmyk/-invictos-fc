@@ -434,7 +434,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <span style="font-size:.75rem;color:var(--tm);white-space:nowrap">💵 Valor por jogador: R$</span>
     <input id="pag-valor" type="number" min="0" step="5" placeholder="0,00"
       style="border:none;background:transparent;font-family:'Cinzel',serif;font-size:1.1rem;font-weight:700;color:var(--gb);width:100%;outline:none"
-      oninput="renderPagamentos()">
+      oninput="renderPagamentos();salvarValoresJogo()">
   </div>
 
   <!-- Resumo -->
@@ -451,7 +451,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
     <div style="display:flex;gap:8px;margin-bottom:8px">
       <div style="flex:1">
         <div style="font-size:.62rem;color:var(--tm);margin-bottom:4px">Valor do campo (R$)</div>
-        <input class="fi" id="pag-valor-campo" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcularSaldo()" style="padding:8px">
+        <input class="fi" id="pag-valor-campo" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcularSaldo();salvarValoresJogo()" style="padding:8px">
       </div>
       <div style="flex:1">
         <div style="font-size:.62rem;color:var(--tm);margin-bottom:4px">Saldo da equipe (R$)</div>
@@ -2134,6 +2134,14 @@ window.onPagGameChange=function(){
   _pagamentos={};
   window._pagConfirmados=[];
   if(_pagGameId){
+    // Carrega valores salvos no jogo (valorPorJogador, valorCampo)
+    var gSel=cache.games.find(function(x){return x.id===_pagGameId;});
+    if(gSel){
+      var elV=document.getElementById('pag-valor');
+      var elC=document.getElementById('pag-valor-campo');
+      if(elV)elV.value=(gSel.valorPorJogador>0?gSel.valorPorJogador:'');
+      if(elC)elC.value=(gSel.valorCampo>0?gSel.valorCampo:'');
+    }
     // Listener pagamentos do jogo
     window._pagUnsubscribe=onSnapshot(collection(db,_pagCol()),function(snap){
       _pagamentos={};
@@ -2146,6 +2154,18 @@ window.onPagGameChange=function(){
       renderPagamentos();
     });
   }else{renderPagamentos();}
+};
+
+// Salva valorPorJogador e valorCampo no game do Firebase
+window.salvarValoresJogo=async function(){
+  if(!_pagGameId)return;
+  var valor=parseFloat(document.getElementById('pag-valor').value)||0;
+  var campo=parseFloat(document.getElementById('pag-valor-campo').value)||0;
+  var g=cache.games.find(function(x){return x.id===_pagGameId;});
+  if(!g)return;
+  try{
+    await setDoc(doc(db,'games',_pagGameId),Object.assign({},g,{valorPorJogador:valor,valorCampo:campo}));
+  }catch(e){}
 };
 
 window.togglePagamento=async function(id){
