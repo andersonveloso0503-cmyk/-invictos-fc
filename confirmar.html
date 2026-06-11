@@ -286,7 +286,10 @@ function renderPage(){
     <!-- BOTOES -->
     ${!isEncerrado?`
     <div style="margin-top:18px">
-      <button class="btn-confirm" onclick="confirmar()"><span>📲</span> CONFIRMAR E AVISAR NO WHATSAPP</button>
+      <button class="btn-confirm" onclick="confirmar()"><span>✅</span> CONFIRMAR PRESENÇA</button>
+      <div id="btn-avisar-wrap" style="display:none;margin-top:10px">
+        <button class="btn-confirm" style="background:linear-gradient(135deg,#1a5c2a,#0d3318);border:1px solid rgba(74,222,128,.3);color:#4ADE80" onclick="avisarGrupoWA()"><span>📲</span> AVISAR NO GRUPO</button>
+      </div>
       <div style="text-align:center;margin:10px 0 6px;font-size:.7rem;color:var(--tm)">Não é jogador do elenco?</div>
       <button class="btn-confirm" style="background:linear-gradient(135deg,#7B1FA2,#4A148C);margin-bottom:8px" onclick="switchTab('convidado');document.getElementById('tab-convidado-content').scrollIntoView({behavior:'smooth'})"><span>🎟️</span> ENTRAR COMO CONVIDADO</button>
       <button class="btn-cancel-pres" onclick="cancelar()">❌ CANCELAR MINHA PRESENÇA</button>
@@ -369,6 +372,9 @@ window.selectPlayer=function(pid){
   showToast('Selecionado: '+(p.nick||p.name)+' — agora confirme!');
 };
 
+// Armazena mensagem pronta para o WA após confirmação
+var _pendingWAMsg=null;
+
 window.confirmar=async function(){
   if(currentTab==='jogador'){
     if(!selectedPlayerId){showToast('Escolha seu nome primeiro!');return;}
@@ -379,14 +385,13 @@ window.confirmar=async function(){
       await setDoc(doc(db,'confirmed_'+gameId,selectedPlayerId),{id:selectedPlayerId});
       await setDoc(doc(db,'confirmed',selectedPlayerId),{id:selectedPlayerId});
       showToast('✅ '+(p.nick||p.name)+' confirmado!');
-      const confPlayers=players.filter(x=>confirmed.includes(x.id));
-      // inclui o jogador que acabou de confirmar se ainda não está na lista
-      const allConf=[...confPlayers];
+      // Monta lista incluindo jogador recém confirmado
+      const allConf=[...players.filter(x=>confirmed.includes(x.id))];
       if(!allConf.find(x=>x.id===selectedPlayerId)) allConf.push(p);
       const listaNum=allConf.map((x,i)=>(i+1)+'. '+(x.nick||x.name.split(' ')[0])).join('\n');
       const guestList=guests.map((g,i)=>(allConf.length+i+1)+'. 🎟️ '+g.name+' (conv.)').join('\n');
       const total=allConf.length+guests.length;
-      const msg=
+      _pendingWAMsg=
         '✅ *'+(p.nick||p.name)+' confirmou presença!*\n\n'+
         '⚽ *Invictos FC vs '+gameData.opponent+'*\n'+
         (gameData.date?'📅 '+fmtDate(gameData.date):'')+(gameData.time?' · 🕐 '+gameData.time:'')+'\n'+
@@ -396,7 +401,9 @@ window.confirmar=async function(){
         (guestList?'\n'+guestList:'')+
         '\n\n🔗 Confirme sua presença:\nhttps://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n'+
         '🦁 _Invictos FC — Nunca Rendidos!_';
-      setTimeout(()=>window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank'),500);
+      // Exibe botão "Avisar no Grupo"
+      const wrap=document.getElementById('btn-avisar-wrap');
+      if(wrap)wrap.style.display='block';
     }catch(e){showToast('Erro! Tente novamente.');}
   }else{
     const nome=document.getElementById('guest-name').value.trim();
@@ -413,7 +420,7 @@ window.confirmar=async function(){
       const allGuests2=[...guests,{name:nome,pos}];
       const guestList2=allGuests2.map((g,i)=>(confPlayers2.length+i+1)+'. 🎟️ '+g.name+' (conv.)').join('\n');
       const total2=confPlayers2.length+allGuests2.length;
-      const msg=
+      _pendingWAMsg=
         '🎟️ *'+nome+(pos?' ('+pos+')':' (convidado)')+' confirmou presença!*\n\n'+
         '⚽ *Invictos FC vs '+gameData.opponent+'*\n'+
         (gameData.date?'📅 '+fmtDate(gameData.date):'')+(gameData.time?' · 🕐 '+gameData.time:'')+'\n'+
@@ -422,8 +429,16 @@ window.confirmar=async function(){
         (listaNum2?listaNum2+'\n':'')+guestList2+
         '\n\n🔗 Confirme sua presença:\nhttps://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n'+
         '🦁 _Invictos FC — Nunca Rendidos!_';
-      setTimeout(()=>window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank'),500);
+      // Exibe botão "Avisar no Grupo"
+      const wrap=document.getElementById('btn-avisar-wrap');
+      if(wrap)wrap.style.display='block';
     }catch(e){showToast('Erro! Tente novamente.');}
+  }
+};
+
+window.avisarGrupoWA=function(){
+  if(_pendingWAMsg){
+    window.open('https://wa.me/?text='+encodeURIComponent(_pendingWAMsg),'_blank');
   }
 };
 
