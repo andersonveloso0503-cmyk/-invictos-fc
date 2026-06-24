@@ -1522,18 +1522,21 @@ function renderConfirmList(){
   var isLive=nextGame&&getGameStatus(nextGame)==='live';
   var gameId=nextGame?nextGame.id:null;
   var guests=gameId?(cache.guests||[]).filter(function(g){return g.gameId===gameId;}):[]; 
-  var count=cache.confirmed.length+guests.length;
+  // Usa confirmados/ausentes específicos do jogo, com fallback para coleção global
+  var confIds=(gameId&&cache.confirmedByGame&&cache.confirmedByGame[gameId])?cache.confirmedByGame[gameId]:cache.confirmed;
+  var absIds=(gameId&&cache.absentByGame&&cache.absentByGame[gameId])?cache.absentByGame[gameId]:cache.absent;
+  var count=confIds.length+guests.length;
   var h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">'
     +'<span style="font-size:.7rem;color:var(--tm)">'+(isLive?'🔒 Jogo em andamento':'Toque para confirmar')+'</span>'
     +'<span class="ccount">'+count+' confirmado'+(count!==1?'s':'')+'</span></div>';
   h+=cache.players.map(function(p){
-    var isConf=cache.confirmed.includes(p.id);
-    var isAbsent=cache.absent.includes(p.id);
+    var isConf=confIds.includes(p.id);
+    var isAbsent=absIds.includes(p.id);
     var av=p.photo?'<img src="'+p.photo+'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0">':'<span style="font-size:.95rem;flex-shrink:0">'+(p.emoji||'⚽')+'</span>';
     var cls=isConf?'conf':isAbsent?'absent':'';
     var ck=isConf?'✓':isAbsent?'✕':'';
     var badge=isConf?'<span style="font-size:.65rem;color:#4ADE80">✅ CONFIRMADO</span>':isAbsent?'<span style="font-size:.65rem;color:#F87171">❌ AUSENTE</span>':'';
-    var fn=isLive?'':'toggleConf(\''+p.id+'\')';
+    var fn=isLive?'':'toggleConf(\''+p.id+'\',\''+(gameId||'')+'\')';
     return'<div class="ci '+cls+'" onclick="'+fn+'" style="'+(isLive?'cursor:default;':'')+'">'+
       '<div class="cck">'+ck+'</div>'+av+
       '<div style="flex:1"><div class="cname">'+(p.nick||p.name)+'</div><div class="cpos">'+(p.pos||'—')+'</div></div>'+
@@ -1556,44 +1559,64 @@ function renderConfirmList(){
   el.innerHTML=h;
 }
 
-window.toggleConf=async function(pid){
-  const isConf=cache.confirmed.includes(pid);
-  const isAbsent=cache.absent.includes(pid);
+window.toggleConf=async function(pid,gameId){
+  var confIds=(gameId&&cache.confirmedByGame&&cache.confirmedByGame[gameId])?cache.confirmedByGame[gameId]:cache.confirmed;
+  var absIds=(gameId&&cache.absentByGame&&cache.absentByGame[gameId])?cache.absentByGame[gameId]:cache.absent;
+  const isConf=confIds.includes(pid);
+  const isAbsent=absIds.includes(pid);
+  var confCol=gameId?'confirmed_'+gameId:'confirmed';
+  var absCol=gameId?'absent_'+gameId:'absent';
   try{
     if(isConf){
       // Confirmed -> Absent
-      await deleteDoc(doc(db,'confirmed',pid));
-      await setDoc(doc(db,'absent',pid),{id:pid});
+      await deleteDoc(doc(db,confCol,pid));
+      if(gameId)await deleteDoc(doc(db,'confirmed',pid)).catch(function(){});
+      await setDoc(doc(db,absCol,pid),{id:pid});
+      if(gameId)await setDoc(doc(db,'absent',pid),{id:pid}).catch(function(){});
     }else if(isAbsent){
       // Absent -> Neither
-      await deleteDoc(doc(db,'absent',pid));
+      await deleteDoc(doc(db,absCol,pid));
+      if(gameId)await deleteDoc(doc(db,'absent',pid)).catch(function(){});
     }else{
       // Neither -> Confirmed
-      await setDoc(doc(db,'confirmed',pid),{id:pid});
+      await setDoc(doc(db,confCol,pid),{id:pid});
+      if(gameId)await setDoc(doc(db,'confirmed',pid),{id:pid}).catch(function(){});
     }
   }catch(e){showToast('Erro!');}
 };
 
 window.limparConfSilent=async function(){
   try{
+    const today=todayStr();
+    const nextGame=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
+    const gameId=nextGame?nextGame.id:null;
+    const confIds=(gameId&&cache.confirmedByGame&&cache.confirmedByGame[gameId])?cache.confirmedByGame[gameId]:cache.confirmed;
+    const absIds=(gameId&&cache.absentByGame&&cache.absentByGame[gameId])?cache.absentByGame[gameId]:cache.absent;
     const b=writeBatch(db);
-    cache.confirmed.forEach(id=>b.delete(doc(db,'confirmed',id)));
-    cache.absent.forEach(id=>b.delete(doc(db,'absent',id)));
+    confIds.forEach(id=>{b.delete(doc(db,gameId?'confirmed_'+gameId:'confirmed',id));if(gameId)b.delete(doc(db,'confirmed',id));});
+    absIds.forEach(id=>{b.delete(doc(db,gameId?'absent_'+gameId:'absent',id));if(gameId)b.delete(doc(db,'absent',id));});
     await b.commit();
   }catch(e){}
 };
 window.limparConf=async function(){
   if(!confirm('Limpar lista?'))return;
+  const today=todayStr();
+  const nextGame=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
+  const gameId=nextGame?nextGame.id:null;
+  const confIds=(gameId&&cache.confirmedByGame&&cache.confirmedByGame[gameId])?cache.confirmedByGame[gameId]:cache.confirmed;
+  const absIds=(gameId&&cache.absentByGame&&cache.absentByGame[gameId])?cache.absentByGame[gameId]:cache.absent;
   const b=writeBatch(db);
-  cache.confirmed.forEach(id=>b.delete(doc(db,'confirmed',id)));
-  cache.absent.forEach(id=>b.delete(doc(db,'absent',id)));
+  confIds.forEach(id=>{b.delete(doc(db,gameId?'confirmed_'+gameId:'confirmed',id));if(gameId)b.delete(doc(db,'confirmed',id));});
+  absIds.forEach(id=>{b.delete(doc(db,gameId?'absent_'+gameId:'absent',id));if(gameId)b.delete(doc(db,'absent',id));});
   await b.commit();showToast('Lista limpa!');
 };
 
 window.compartilharLista=function(){
-  var conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
   var today=todayStr();
   var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var gameId=nextGame?nextGame.id:null;
+  var confIds=(gameId&&cache.confirmedByGame&&cache.confirmedByGame[gameId])?cache.confirmedByGame[gameId]:cache.confirmed;
+  var conf=cache.players.filter(function(p){return confIds.includes(p.id);});
   var gameGuests=nextGame?(cache.guests||[]).filter(function(g){return g.gameId===nextGame.id;}):[]; 
   var total=conf.length+gameGuests.length;
   if(total===0){showToast('Nenhum confirmado!');return;}
@@ -2374,16 +2397,23 @@ async function startListeners(){
   onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
   onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
-  // Listener do próximo jogo agendado para home
+  // Listener do próximo jogo agendado para home + aba WhatsApp
   cache.confirmedByGame={};
+  cache.absentByGame={};
   onSnapshot(collection(db,'games'),async function(){
     const today=todayStr();
     const next=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
     if(!next)return;
     if(window._homeConfUnsub) window._homeConfUnsub();
+    if(window._homeAbsUnsub) window._homeAbsUnsub();
     window._homeConfUnsub=onSnapshot(collection(db,'confirmed_'+next.id),function(snap){
       cache.confirmedByGame[next.id]=snap.docs.map(d=>d.id);
       renderHome();
+      renderConfirmList();
+    });
+    window._homeAbsUnsub=onSnapshot(collection(db,'absent_'+next.id),function(snap){
+      cache.absentByGame[next.id]=snap.docs.map(d=>d.id);
+      renderConfirmList();
     });
   });
   onSnapshot(collection(db,'guests'),function(snap){
@@ -2622,6 +2652,8 @@ window.compartilharLinkConf=function(gameId,opp,date,time,loc){
   msg+='\n👇 *Clique no link, escolha seu nome e confirme:*\n\n';
   msg+='🔗 '+matchLink+'\n';
   if(addr)msg+='\n🗺️ Como chegar: https://maps.google.com/?q='+encodeURIComponent(addr)+'\n';
+  msg+='\n🎟️ *Convidado(a) para o jogo?*\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'&tab=convidado\n';
   msg+='\n✅ Confirme e avise no grupo!\n';
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
@@ -2786,6 +2818,8 @@ window.enviarListaConfirmadosWA=async function(gameId){
   msg+='\n👇 Ainda não confirmou? Clique no link:\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/match.html?jogo='+gameId+'\n';
   if(g.address)msg+='\n🗺️ Como chegar: https://maps.google.com/?q='+encodeURIComponent(g.address)+'\n';
+  msg+='\n🎟️ *Convidado(a) para o jogo?*\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'&tab=convidado\n';
   msg+='\n🦁 _Invictos FC — Nunca Rendidos!_';
 
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');

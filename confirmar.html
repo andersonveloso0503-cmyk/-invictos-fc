@@ -164,6 +164,10 @@ function getParams(){
   const p=new URLSearchParams(window.location.search);
   return p.get('jogo');
 }
+function getTabParam(){
+  const p=new URLSearchParams(window.location.search);
+  return p.get('tab');
+}
 
 async function init(){
   gameId=getParams();
@@ -181,9 +185,19 @@ async function init(){
   }catch(e){}
 
   // Listeners em tempo real
+  let _firstRender=true;
   onSnapshot(collection(db,'players'),snap=>{
     players=snap.docs.map(d=>({id:d.id,...d.data()}));
     renderPage();
+    if(_firstRender){
+      _firstRender=false;
+      const tabParam=getTabParam();
+      if(tabParam==='convidado'){
+        setTimeout(()=>{
+          if(window.switchTab)window.switchTab('convidado');
+        },100);
+      }
+    }
   });
 
   onSnapshot(collection(db,'confirmed_'+gameId),snap=>{
@@ -240,16 +254,16 @@ function renderPage(){
 
     <!-- TAB JOGADOR -->
     <div id="tab-jogador-content">
-      <div class="sh"><h2>ESCOLHA SEU NOME</h2><div class="sl"></div></div>
+      <div class="sh"><h2>TOQUE NO SEU NOME PARA CONFIRMAR/CANCELAR</h2><div class="sl"></div></div>
       <div id="player-list">
         ${players.map(p=>{
           const av=p.photo?`<img src="${p.photo}" alt="">`:(p.emoji||'⚽');
           const isConf=confirmed.includes(p.id);
           const isAbs=absent.includes(p.id);
-          let cls='',status='⭕',title='';
-          if(isConf){cls='already-conf';status='✅';title='Já confirmado';}
-          else if(isAbs){cls='cancelled';status='❌';title='Ausente';}
-          return`<div class="player-item ${cls}" onclick="selectPlayer('${p.id}')" title="${title}">
+          let cls='',status='⭕',title='Toque para confirmar';
+          if(isConf){cls='already-conf';status='✅';title='Confirmado — toque para cancelar';}
+          else if(isAbs){cls='cancelled';status='❌';title='Ausente — toque para confirmar';}
+          return`<div class="player-item ${cls}" onclick="togglePlayerStatus('${p.id}')" title="${title}">
             <div class="player-avatar">${av}</div>
             <div class="player-info">
               <div class="player-name">${p.nick||p.name}</div>
@@ -266,8 +280,7 @@ function renderPage(){
       <div class="sh"><h2>SEUS DADOS</h2><div class="sl"></div></div>
       <input class="fi" id="guest-name" placeholder="Seu nome completo">
       <input class="fi" id="guest-pos" placeholder="Posição (ex: Atacante)" style="margin-top:8px">
-      <button class="btn-confirm" style="margin-top:14px;background:linear-gradient(135deg,#7B1FA2,#4A148C)" onclick="confirmarConvidado()"><span>📲</span> CONFIRMAR E AVISAR NO WHATSAPP</button>
-      <button class="btn-confirm" style="margin-top:8px;background:linear-gradient(135deg,#1a5c2a,#0d3318);border:1px solid rgba(74,222,128,.3);color:#4ADE80" onclick="enviarListaConvidadoWA()"><span>📋</span> ENVIAR LISTA DE CONFIRMADOS</button>
+      <button class="btn-confirm" style="margin-top:14px;background:linear-gradient(135deg,#7B1FA2,#4A148C)" onclick="confirmarConvidado()"><span>📲</span> CONFIRMAR PRESENÇA</button>
     </div>
 
     <!-- LISTA CONFIRMADOS -->
@@ -283,16 +296,12 @@ function renderPage(){
       <div id="chips-wrap"></div>
     </div>
 
-    <!-- BOTOES -->
+    <!-- BOTAO ÚNICO ENVIAR LISTA -->
     ${!isEncerrado?`
     <div style="margin-top:18px">
-      <button class="btn-confirm" onclick="confirmar()"><span>✅</span> CONFIRMAR PRESENÇA</button>
-      <div id="btn-avisar-wrap" style="display:none;margin-top:10px">
-        <button class="btn-confirm" style="background:linear-gradient(135deg,#1a5c2a,#0d3318);border:1px solid rgba(74,222,128,.3);color:#4ADE80" onclick="avisarGrupoWA()"><span>📲</span> AVISAR NO GRUPO</button>
-      </div>
+      <button class="btn-confirm" style="background:linear-gradient(135deg,#25D366,#128C7E)" onclick="enviarListaCompletaWA()"><span>📲</span> ENVIAR LISTA NO WHATSAPP</button>
       <div style="text-align:center;margin:10px 0 6px;font-size:.7rem;color:var(--tm)">Não é jogador do elenco?</div>
-      <button class="btn-confirm" style="background:linear-gradient(135deg,#7B1FA2,#4A148C);margin-bottom:8px" onclick="switchTab('convidado');document.getElementById('tab-convidado-content').scrollIntoView({behavior:'smooth'})"><span>🎟️</span> ENTRAR COMO CONVIDADO</button>
-      <button class="btn-cancel-pres" onclick="cancelar()">❌ CANCELAR MINHA PRESENÇA</button>
+      <button class="btn-confirm" style="background:linear-gradient(135deg,#7B1FA2,#4A148C)" onclick="switchTab('convidado');document.getElementById('tab-convidado-content').scrollIntoView({behavior:'smooth'})"><span>🎟️</span> ENTRAR COMO CONVIDADO</button>
     </div>`:``}
   `;
 
@@ -349,113 +358,39 @@ window.switchTab=function(tab){
   });
 };
 
-window.selectPlayer=function(pid){
+window.togglePlayerStatus=async function(pid){
   const p=players.find(x=>x.id===pid);
   if(!p)return;
-  if(absent.includes(pid)){showToast('Você cancelou. Toque em Confirmar para voltar!');selectedPlayerId=pid;return;}
-  if(confirmed.includes(pid)){showToast(p.nick||p.name+' já está confirmado!');return;}
-  selectedPlayerId=pid;
-  document.querySelectorAll('.player-item').forEach(item=>{
-    const nameEl=item.querySelector('.player-name');
-    if(!nameEl)return;
-    const pName=p.nick||p.name;
-    if(nameEl.textContent===pName&&!confirmed.includes(pid)&&!absent.includes(pid)){
-      item.classList.add('selected');
-      item.querySelector('.player-status').textContent='👆';
-    }else if(!confirmed.includes(pid)&&!absent.includes(pid)){
-      item.classList.remove('selected');
-      const pp=players.find(x=>(x.nick||x.name)===nameEl.textContent);
-      if(pp&&!confirmed.includes(pp.id)&&!absent.includes(pp.id))
-        item.querySelector('.player-status').textContent='⭕';
+  const isConf=confirmed.includes(pid);
+  const isAbs=absent.includes(pid);
+  try{
+    if(isConf){
+      // Confirmado -> Ausente
+      await deleteDoc(doc(db,'confirmed_'+gameId,pid));
+      await deleteDoc(doc(db,'confirmed',pid));
+      await setDoc(doc(db,'absent_'+gameId,pid),{id:pid});
+      await setDoc(doc(db,'absent',pid),{id:pid});
+      showToast('❌ '+(p.nick||p.name)+' marcado como AUSENTE');
+    }else{
+      // Ausente ou neutro -> Confirmado
+      await deleteDoc(doc(db,'absent_'+gameId,pid)).catch(()=>{});
+      await deleteDoc(doc(db,'absent',pid)).catch(()=>{});
+      await setDoc(doc(db,'confirmed_'+gameId,pid),{id:pid});
+      await setDoc(doc(db,'confirmed',pid),{id:pid});
+      showToast('✅ '+(p.nick||p.name)+' CONFIRMADO');
     }
-  });
-  showToast('Selecionado: '+(p.nick||p.name)+' — agora confirme!');
+  }catch(e){showToast('Erro ao atualizar!');}
 };
 
-// Armazena mensagem pronta para o WA após confirmação
-var _pendingWAMsg=null;
-
-window.confirmar=async function(){
-  if(currentTab==='jogador'){
-    if(!selectedPlayerId){showToast('Escolha seu nome primeiro!');return;}
-    const p=players.find(x=>x.id===selectedPlayerId);if(!p)return;
-    try{
-      await deleteDoc(doc(db,'absent_'+gameId,selectedPlayerId));
-      await deleteDoc(doc(db,'absent',selectedPlayerId));
-      await setDoc(doc(db,'confirmed_'+gameId,selectedPlayerId),{id:selectedPlayerId});
-      await setDoc(doc(db,'confirmed',selectedPlayerId),{id:selectedPlayerId});
-      showToast('✅ '+(p.nick||p.name)+' confirmado!');
-      // Monta lista incluindo jogador recém confirmado
-      const allConf=[...players.filter(x=>confirmed.includes(x.id))];
-      if(!allConf.find(x=>x.id===selectedPlayerId)) allConf.push(p);
-      const listaNum=allConf.map((x,i)=>(i+1)+'. '+(x.nick||x.name.split(' ')[0])).join('\n');
-      const guestList=guests.map((g,i)=>(allConf.length+i+1)+'. 🎟️ '+g.name+' (conv.)').join('\n');
-      const total=allConf.length+guests.length;
-      _pendingWAMsg=
-        '✅ *'+(p.nick||p.name)+' confirmou presença!*\n\n'+
-        '⚽ *Invictos FC vs '+gameData.opponent+'*\n'+
-        (gameData.date?'📅 '+fmtDate(gameData.date):'')+(gameData.time?' · 🕐 '+gameData.time:'')+'\n'+
-        (gameData.location?'📍 '+gameData.location+'\n':'')+
-        '\n👥 *Lista confirmada ('+total+'):*\n'+
-        listaNum+
-        (guestList?'\n'+guestList:'')+
-        '\n\n🔗 Confirme sua presença:\nhttps://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n'+
-        '🦁 _Invictos FC — Nunca Rendidos!_';
-      // Exibe botão "Avisar no Grupo"
-      const wrap=document.getElementById('btn-avisar-wrap');
-      if(wrap)wrap.style.display='block';
-    }catch(e){showToast('Erro! Tente novamente.');}
-  }else{
-    const nome=document.getElementById('guest-name').value.trim();
-    const pos=document.getElementById('guest-pos').value.trim();
-    if(!nome){showToast('Digite seu nome!');return;}
-    try{
-      const id='guest_'+Date.now();
-      await setDoc(doc(db,'guests',id),{id,gameId,name:nome,pos,createdAt:Date.now()});
-      showToast('🎟️ '+nome+' confirmado como convidado!');
-      document.getElementById('guest-name').value='';
-      document.getElementById('guest-pos').value='';
-      const confPlayers2=players.filter(x=>confirmed.includes(x.id));
-      const listaNum2=confPlayers2.map((x,i)=>(i+1)+'. '+(x.nick||x.name.split(' ')[0])).join('\n');
-      const allGuests2=[...guests,{name:nome,pos}];
-      const guestList2=allGuests2.map((g,i)=>(confPlayers2.length+i+1)+'. 🎟️ '+g.name+' (conv.)').join('\n');
-      const total2=confPlayers2.length+allGuests2.length;
-      _pendingWAMsg=
-        '🎟️ *'+nome+(pos?' ('+pos+')':' (convidado)')+' confirmou presença!*\n\n'+
-        '⚽ *Invictos FC vs '+gameData.opponent+'*\n'+
-        (gameData.date?'📅 '+fmtDate(gameData.date):'')+(gameData.time?' · 🕐 '+gameData.time:'')+'\n'+
-        (gameData.location?'📍 '+gameData.location+'\n':'')+
-        '\n👥 *Lista confirmada ('+total2+'):*\n'+
-        (listaNum2?listaNum2+'\n':'')+guestList2+
-        '\n\n🔗 Confirme sua presença:\nhttps://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n'+
-        '🦁 _Invictos FC — Nunca Rendidos!_';
-      // Exibe botão "Avisar no Grupo"
-      const wrap=document.getElementById('btn-avisar-wrap');
-      if(wrap)wrap.style.display='block';
-    }catch(e){showToast('Erro! Tente novamente.');}
-  }
-};
-
-window.avisarGrupoWA=function(){
-  if(_pendingWAMsg){
-    window.open('https://wa.me/?text='+encodeURIComponent(_pendingWAMsg),'_blank');
-  }
-};
-
-window.confirmarConvidado=async function(){
-  if(currentTab!=='convidado') currentTab='convidado';
-  await window.confirmar();
-};
-
-window.enviarListaConvidadoWA=function(){
+window.enviarListaCompletaWA=function(){
   const confPlayers=players.filter(x=>confirmed.includes(x.id));
-  const guestList=(guests||[]);
-  const total=confPlayers.length+guestList.length;
-  if(total===0){showToast('Nenhum confirmado ainda!');return;}
+  const absPlayers=players.filter(x=>absent.includes(x.id));
+  const total=confPlayers.length+guests.length;
   function fmtD(d){if(!d)return'';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
   let lista='';
-  confPlayers.forEach((p,i)=>{lista+=(i+1)+'. '+(p.nick||p.name.split(' ')[0])+'\n';});
-  guestList.forEach((g,i)=>{lista+=(confPlayers.length+i+1)+'. 🎟️ '+g.name+' (conv.)\n';});
+  confPlayers.forEach((p,i)=>{lista+=(i+1)+'. ✅ '+(p.nick||p.name.split(' ')[0])+'\n';});
+  guests.forEach((g,i)=>{lista+=(confPlayers.length+i+1)+'. ✅ 🎟️ '+g.name+' (conv.)\n';});
+  absPlayers.forEach((p)=>{lista+='❌ '+(p.nick||p.name.split(' ')[0])+' (não vai)\n';});
   let msg='⚽ *INVICTOS FC — LISTA DO JOGO*\n\n';
   if(gameData){
     msg+='🏆 Invictos FC vs '+gameData.opponent+'\n';
@@ -465,33 +400,28 @@ window.enviarListaConvidadoWA=function(){
     if(gameData.location)msg+='📍 '+gameData.location+'\n';
   }
   msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
-  msg+='\n👇 Ainda não confirmou?\n';
-  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
+  msg+='\n👇 *Ainda não confirmou? Toque no link:*\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n';
+  msg+='\n🎟️ *Convidado(a) para o jogo?*\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'&tab=convidado\n\n';
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 };
 
-window.cancelar=async function(){
-  if(currentTab==='jogador'){
-    if(!selectedPlayerId){showToast('Escolha seu nome primeiro!');return;}
-    const p=players.find(x=>x.id===selectedPlayerId);if(!p)return;
-    if(!confirm('Cancelar presença de '+(p.nick||p.name)+'?'))return;
-    try{
-      await deleteDoc(doc(db,'confirmed_'+gameId,selectedPlayerId));
-      await deleteDoc(doc(db,'confirmed',selectedPlayerId));
-      await setDoc(doc(db,'absent_'+gameId,selectedPlayerId),{id:selectedPlayerId});
-      await setDoc(doc(db,'absent',selectedPlayerId),{id:selectedPlayerId});
-      showToast('❌ Presença cancelada.');
-      const msg=
-        '❌ *'+(p.nick||p.name)+' cancelou a presença.*\n\n'+
-        '⚽ Invictos FC vs '+gameData.opponent+'\n'+
-        (gameData.date?'📅 '+fmtDate(gameData.date):'')+'\n\n'+
-        '🦁 _Invictos FC_';
-      setTimeout(()=>window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank'),500);
-    }catch(e){showToast('Erro!');}
-  }else{
-    showToast('Selecione seu nome na aba Jogador para cancelar.');
-  }
+// Armazena mensagem pronta para o WA após confirmação
+var _pendingWAMsg=null;
+
+window.confirmarConvidado=async function(){
+  const nome=document.getElementById('guest-name').value.trim();
+  const pos=document.getElementById('guest-pos').value.trim();
+  if(!nome){showToast('Digite seu nome!');return;}
+  try{
+    const id='guest_'+Date.now();
+    await setDoc(doc(db,'guests',id),{id,gameId,name:nome,pos,createdAt:Date.now()});
+    showToast('🎟️ '+nome+' confirmado como convidado!');
+    document.getElementById('guest-name').value='';
+    document.getElementById('guest-pos').value='';
+  }catch(e){showToast('Erro! Tente novamente.');}
 };
 
 // splash
