@@ -2649,7 +2649,7 @@ window.compartilharLinkConf=function(gameId,opp,date,time,loc){
   if(date||time)msg+='\n';
   if(loc)msg+='📍 '+loc+'\n';
   if(addr)msg+='📌 '+addr+'\n';
-  msg+='\n👇 *Clique no link, escolha seu nome e confirme:*\n\n';
+  msg+='\n⬇️ *Clique aqui se irá jogar ou não irá jogar:*\n\n';
   msg+='🔗 '+matchLink+'\n';
   if(addr)msg+='\n🗺️ Como chegar: https://maps.google.com/?q='+encodeURIComponent(addr)+'\n';
   msg+='\n🎟️ *Convidado(a) para o jogo?*\n';
@@ -2815,7 +2815,7 @@ window.enviarListaConfirmadosWA=async function(gameId){
   if(g.location)msg+='📍 '+g.location+'\n';
   if(g.address)msg+='📌 '+g.address+'\n';
   msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
-  msg+='\n👇 Ainda não confirmou? Clique no link:\n';
+  msg+='\n⬇️ Clique aqui se irá jogar ou não irá jogar:\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/match.html?jogo='+gameId+'\n';
   if(g.address)msg+='\n🗺️ Como chegar: https://maps.google.com/?q='+encodeURIComponent(g.address)+'\n';
   msg+='\n🎟️ *Convidado(a) para o jogo?*\n';

@@ -121,6 +121,22 @@ header{background:rgba(10,6,4,.97);border-bottom:1px solid var(--br);backdrop-fi
   </div>
 </div>
 
+<!-- POPUP CONVIDADO -->
+<div id="guestOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:linear-gradient(160deg,#1a0e08,#0A0604);border:1px solid rgba(201,168,76,.4);border-radius:16px;padding:22px;box-shadow:0 8px 32px rgba(0,0,0,.6);max-width:380px;width:100%;max-height:85vh;overflow-y:auto">
+    <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#7B1FA2,#4A148C);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px">🎟️</div>
+    <div style="font-family:'Cinzel',serif;font-size:1.1rem;font-weight:900;text-align:center;color:#F0C040;letter-spacing:1px;margin-bottom:4px">VOCÊ FOI CONVIDADO!</div>
+    <div id="guestPopupSub" style="text-align:center;font-size:.78rem;color:#9A8060;margin-bottom:18px"></div>
+
+    <div id="guestFieldsWrap"></div>
+
+    <button onclick="addGuestField()" style="width:100%;padding:9px;background:none;border:1px dashed rgba(171,71,188,.5);border-radius:8px;color:#CE93D8;font-size:.72rem;font-weight:700;letter-spacing:.5px;margin-top:4px;cursor:pointer">+ ADICIONAR OUTRO CONVIDADO</button>
+
+    <button class="btn-confirm" style="margin-top:16px;background:linear-gradient(135deg,#25D366,#128C7E)" onclick="salvarEEnviarConvidados()"><span>📲</span> SALVAR E ENVIAR PARA O GRUPO</button>
+    <button onclick="fecharPopupConvidado()" style="width:100%;padding:11px;background:none;border:none;color:#6b5a45;font-size:.75rem;margin-top:8px;cursor:pointer">cancelar</button>
+  </div>
+</div>
+
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,doc,getDoc,setDoc,deleteDoc,onSnapshot,collection}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -194,8 +210,8 @@ async function init(){
       const tabParam=getTabParam();
       if(tabParam==='convidado'){
         setTimeout(()=>{
-          if(window.switchTab)window.switchTab('convidado');
-        },100);
+          if(window.abrirPopupConvidado)window.abrirPopupConvidado();
+        },150);
       }
     }
   });
@@ -245,42 +261,25 @@ function renderPage(){
 
     ${isEncerrado?`<div class="encerrado-badge">⛔ Este jogo já foi encerrado. Confirmações desativadas.</div>`:''}
 
-    <!-- TABS -->
-    ${!isEncerrado?`
-    <div class="tab-bar">
-      <button class="tab-btn active" id="tab-btn-jogador" onclick="switchTab('jogador')" style="background:linear-gradient(135deg,#8B1A1A,#5C0E0E);color:#F0C040;border:1px solid rgba(201,168,76,.5);font-size:.75rem;padding:11px 4px">👤 SOU JOGADOR</button>
-      <button class="tab-btn" id="tab-btn-convidado" onclick="switchTab('convidado')" style="border:1px solid rgba(171,71,188,.4);color:#CE93D8;font-size:.75rem;padding:11px 4px">🎟️ SOU CONVIDADO</button>
-    </div>`:''} 
-
-    <!-- TAB JOGADOR -->
-    <div id="tab-jogador-content">
-      <div class="sh"><h2>TOQUE NO SEU NOME PARA CONFIRMAR/CANCELAR</h2><div class="sl"></div></div>
-      <div id="player-list">
-        ${players.map(p=>{
-          const av=p.photo?`<img src="${p.photo}" alt="">`:(p.emoji||'⚽');
-          const isConf=confirmed.includes(p.id);
-          const isAbs=absent.includes(p.id);
-          let cls='',status='⭕',title='Toque para confirmar';
-          if(isConf){cls='already-conf';status='✅';title='Confirmado — toque para cancelar';}
-          else if(isAbs){cls='cancelled';status='❌';title='Ausente — toque para confirmar';}
-          return`<div class="player-item ${cls}" onclick="togglePlayerStatus('${p.id}')" title="${title}">
-            <div class="player-avatar">${av}</div>
-            <div class="player-info">
-              <div class="player-name">${p.nick||p.name}</div>
-              <div class="player-pos">${p.pos||'—'}</div>
-            </div>
-            <div class="player-status">${status}</div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- TAB CONVIDADO -->
-    <div id="tab-convidado-content" style="display:none">
-      <div class="sh"><h2>SEUS DADOS</h2><div class="sl"></div></div>
-      <input class="fi" id="guest-name" placeholder="Seu nome completo">
-      <input class="fi" id="guest-pos" placeholder="Posição (ex: Atacante)" style="margin-top:8px">
-      <button class="btn-confirm" style="margin-top:14px;background:linear-gradient(135deg,#7B1FA2,#4A148C)" onclick="confirmarConvidado()"><span>📲</span> CONFIRMAR PRESENÇA</button>
+    <!-- LISTA DE JOGADORES -->
+    <div class="sh"><h2>TOQUE NO SEU NOME PARA CONFIRMAR/CANCELAR</h2><div class="sl"></div></div>
+    <div id="player-list">
+      ${players.map(p=>{
+        const av=p.photo?`<img src="${p.photo}" alt="">`:(p.emoji||'⚽');
+        const isConf=confirmed.includes(p.id);
+        const isAbs=absent.includes(p.id);
+        let cls='',status='⭕',title='Toque para confirmar';
+        if(isConf){cls='already-conf';status='✅';title='Confirmado — toque para cancelar';}
+        else if(isAbs){cls='cancelled';status='❌';title='Ausente — toque para confirmar';}
+        return`<div class="player-item ${cls}" onclick="togglePlayerStatus('${p.id}')" title="${title}">
+          <div class="player-avatar">${av}</div>
+          <div class="player-info">
+            <div class="player-name">${p.nick||p.name}</div>
+            <div class="player-pos">${p.pos||'—'}</div>
+          </div>
+          <div class="player-status">${status}</div>
+        </div>`;
+      }).join('')}
     </div>
 
     <!-- LISTA CONFIRMADOS -->
@@ -301,7 +300,7 @@ function renderPage(){
     <div style="margin-top:18px">
       <button class="btn-confirm" style="background:linear-gradient(135deg,#25D366,#128C7E)" onclick="enviarListaCompletaWA()"><span>📲</span> ENVIAR LISTA NO WHATSAPP</button>
       <div style="text-align:center;margin:10px 0 6px;font-size:.7rem;color:var(--tm)">Não é jogador do elenco?</div>
-      <button class="btn-confirm" style="background:linear-gradient(135deg,#7B1FA2,#4A148C)" onclick="switchTab('convidado');document.getElementById('tab-convidado-content').scrollIntoView({behavior:'smooth'})"><span>🎟️</span> ENTRAR COMO CONVIDADO</button>
+      <button class="btn-confirm" style="background:linear-gradient(135deg,#7B1FA2,#4A148C)" onclick="abrirPopupConvidado()"><span>🎟️</span> ENTRAR COMO CONVIDADO</button>
     </div>`:``}
   `;
 
@@ -348,14 +347,64 @@ function updateLista(){
   });
 }
 
-window.switchTab=function(tab){
-  currentTab=tab;
-  ['jogador','convidado'].forEach(t=>{
-    const btn=document.getElementById('tab-btn-'+t);
-    const content=document.getElementById('tab-'+t+'-content');
-    if(btn)btn.classList.toggle('active',t===tab);
-    if(content)content.style.display=t===tab?'block':'none';
-  });
+// ===== POPUP CONVIDADO =====
+var _guestFields=[{name:'',pos:''}];
+
+window.abrirPopupConvidado=function(){
+  _guestFields=[{name:'',pos:''}];
+  renderPopupConvidado();
+  const sub=document.getElementById('guestPopupSub');
+  if(sub&&gameData){
+    sub.textContent='Invictos FC vs '+(gameData.opponent||'?')+(gameData.date?' · '+fmtDate(gameData.date):'')+(gameData.time?' · '+gameData.time+'h':'');
+  }
+  document.getElementById('guestOverlay').style.display='flex';
+};
+
+window.fecharPopupConvidado=function(){
+  document.getElementById('guestOverlay').style.display='none';
+};
+
+window.addGuestField=function(){
+  _guestFields.push({name:'',pos:''});
+  renderPopupConvidado();
+};
+
+window.removeGuestField=function(idx){
+  _guestFields.splice(idx,1);
+  renderPopupConvidado();
+};
+
+window.updateGuestField=function(idx,key,val){
+  _guestFields[idx][key]=val;
+};
+
+function renderPopupConvidado(){
+  const wrap=document.getElementById('guestFieldsWrap');
+  if(!wrap)return;
+  wrap.innerHTML=_guestFields.map((g,i)=>`
+    <div class="guest-card" style="position:relative;background:rgba(123,31,162,.08);border:1px solid rgba(171,71,188,.3);border-radius:10px;padding:12px;margin-bottom:10px">
+      ${_guestFields.length>1?`<span onclick="removeGuestField(${i})" style="position:absolute;top:8px;right:8px;color:#F87171;font-size:.85rem;cursor:pointer">✕</span>`:''}
+      <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:5px;font-weight:700">${_guestFields.length>1?'NOME DO CONVIDADO '+(i+1):'SEU NOME'}</div>
+      <input class="fi" value="${g.name}" placeholder="Ex: Rafael Silva" oninput="updateGuestField(${i},'name',this.value)" style="margin-bottom:10px">
+      <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:5px;font-weight:700">POSIÇÃO</div>
+      <input class="fi" value="${g.pos}" placeholder="Ex: Atacante" oninput="updateGuestField(${i},'pos',this.value)">
+    </div>
+  `).join('');
+}
+
+window.salvarEEnviarConvidados=async function(){
+  const validGuests=_guestFields.filter(g=>g.name.trim());
+  if(validGuests.length===0){showToast('Preencha pelo menos um nome!');return;}
+  try{
+    for(const g of validGuests){
+      const id='guest_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      await setDoc(doc(db,'guests',id),{id,gameId,name:g.name.trim(),pos:g.pos.trim(),createdAt:Date.now()});
+    }
+    showToast('🎟️ Convidado(s) salvo(s)!');
+    fecharPopupConvidado();
+    // Aguarda um instante para o listener de guests atualizar
+    setTimeout(()=>{enviarListaCompletaWA();},600);
+  }catch(e){showToast('Erro ao salvar!');}
 };
 
 window.togglePlayerStatus=async function(pid){
@@ -400,7 +449,7 @@ window.enviarListaCompletaWA=function(){
     if(gameData.location)msg+='📍 '+gameData.location+'\n';
   }
   msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
-  msg+='\n👇 *Ainda não confirmou? Toque no link:*\n';
+  msg+='\n⬇️ *Clique aqui se irá jogar ou não irá jogar:*\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n';
   msg+='\n🎟️ *Convidado(a) para o jogo?*\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'&tab=convidado\n\n';
@@ -410,19 +459,6 @@ window.enviarListaCompletaWA=function(){
 
 // Armazena mensagem pronta para o WA após confirmação
 var _pendingWAMsg=null;
-
-window.confirmarConvidado=async function(){
-  const nome=document.getElementById('guest-name').value.trim();
-  const pos=document.getElementById('guest-pos').value.trim();
-  if(!nome){showToast('Digite seu nome!');return;}
-  try{
-    const id='guest_'+Date.now();
-    await setDoc(doc(db,'guests',id),{id,gameId,name:nome,pos,createdAt:Date.now()});
-    showToast('🎟️ '+nome+' confirmado como convidado!');
-    document.getElementById('guest-name').value='';
-    document.getElementById('guest-pos').value='';
-  }catch(e){showToast('Erro! Tente novamente.');}
-};
 
 // splash
 setTimeout(()=>{
