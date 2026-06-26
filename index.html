@@ -1570,17 +1570,13 @@ window.toggleConf=async function(pid,gameId){
     if(isConf){
       // Confirmed -> Absent
       await deleteDoc(doc(db,confCol,pid));
-      if(gameId)await deleteDoc(doc(db,'confirmed',pid)).catch(function(){});
       await setDoc(doc(db,absCol,pid),{id:pid});
-      if(gameId)await setDoc(doc(db,'absent',pid),{id:pid}).catch(function(){});
     }else if(isAbsent){
       // Absent -> Neither
       await deleteDoc(doc(db,absCol,pid));
-      if(gameId)await deleteDoc(doc(db,'absent',pid)).catch(function(){});
     }else{
       // Neither -> Confirmed
       await setDoc(doc(db,confCol,pid),{id:pid});
-      if(gameId)await setDoc(doc(db,'confirmed',pid),{id:pid}).catch(function(){});
     }
   }catch(e){showToast('Erro!');}
 };
@@ -2661,72 +2657,54 @@ window.compartilharLinkConf=function(gameId,opp,date,time,loc){
 
 // ===== SALVAR LISTA E ZERAR =====
 window.zerarListaAgora=async function(){
-  if(!confirm('🗑️ ZERAR LISTA\n\nIsso vai apagar todos os confirmados e ausentes do Firestore SEM salvar no jogo.\n\nTem certeza?'))return;
+  if(!_pagGameId){showToast('Selecione um jogo primeiro!');return;}
+  if(!confirm('🗑️ ZERAR LISTA\n\nIsso vai apagar todos os confirmados e ausentes DESTE JOGO no Firestore SEM salvar.\n\nTem certeza?'))return;
   showSync(true);
   try{
-    var snapConf=await getDocs(collection(db,'confirmed'));
-    var snapAbs=await getDocs(collection(db,'absent'));
+    var snapConf=await getDocs(collection(db,'confirmed_'+_pagGameId));
+    var snapAbs=await getDocs(collection(db,'absent_'+_pagGameId));
     var b=writeBatch(db);
-    snapConf.docs.forEach(function(d){b.delete(doc(db,'confirmed',d.id));});
-    snapAbs.docs.forEach(function(d){b.delete(doc(db,'absent',d.id));});
+    snapConf.docs.forEach(function(d){b.delete(doc(db,'confirmed_'+_pagGameId,d.id));});
+    snapAbs.docs.forEach(function(d){b.delete(doc(db,'absent_'+_pagGameId,d.id));});
     await b.commit();
-    // Reseta seleção de jogo para forçar reload
-    _pagGameId=null;
-    if(window._pagUnsubscribe){try{window._pagUnsubscribe();}catch(e){}}
-    window._pagUnsubscribe=null;
     _pagamentos={};
-    var sel=document.getElementById('pag-game-select');
-    if(sel)sel.value='';
     renderPagamentos();
-    showToast('✅ Lista zerada!');
+    showToast('✅ Lista do jogo zerada!');
   }catch(e){showToast('Erro ao zerar lista!');}
   showSync(false);
 };
 
 window.salvarEZerarLista=async function(){
-  var conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
-  var abs=cache.players.filter(function(p){return cache.absent.includes(p.id);});
+  if(!_pagGameId){showToast('Selecione um jogo na aba Pagamentos primeiro!');return;}
+  var confIds=(cache.confirmedByGame&&cache.confirmedByGame[_pagGameId])||[];
+  var absIds=(cache.absentByGame&&cache.absentByGame[_pagGameId])||[];
+  var conf=cache.players.filter(function(p){return confIds.includes(p.id);});
+  var abs=cache.players.filter(function(p){return absIds.includes(p.id);});
   if(conf.length===0&&abs.length===0){showToast('Lista vazia, nada para salvar!');return;}
-  var today=todayStr();
-  var nextGame=cache.games.filter(function(g){return g.status==='agendado'&&g.date>=today;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);})[0];
+  var g=cache.games.find(function(x){return x.id===_pagGameId;});
   var total=conf.length;
   var nomes=conf.slice(0,5).map(function(p){return p.nick||p.name.split(' ')[0];}).join(', ');
   var mais=conf.length>5?' e mais '+(conf.length-5)+'...':'';
-  var jogo=nextGame?'⚽ Jogo: Invictos FC vs '+nextGame.opponent+'\n📅 '+fmtDate(nextGame.date)+'\n\n':'';
+  var jogo=g?'⚽ Jogo: Invictos FC vs '+g.opponent+'\n📅 '+fmtDate(g.date)+'\n\n':'';
   var confirmou=confirm(
     '💾 SALVAR LISTA DO JOGO\n\n'+jogo+
     '✅ Confirmados: '+total+' jogador'+(total!==1?'es':'')+'\n'+
     (nomes?'👥 '+nomes+mais+'\n':'')+
     '❌ Ausentes: '+abs.length+'\n\n'+
-    '⚠️ A lista será salva no jogo e zerada para o próximo.\n\nDeseja continuar?'
+    '⚠️ A lista será salva no jogo.\n\nDeseja continuar?'
   );
   if(!confirmou)return;
-  if(!nextGame){showToast('Nenhum jogo agendado encontrado!');return;}
+  if(!g){showToast('Jogo não encontrado!');return;}
   showSync(true);
   try{
     var jogoPatch={
-      listaConfirmados:cache.confirmed.slice(),
-      listaAusentes:cache.absent.slice(),
+      listaConfirmados:confIds.slice(),
+      listaAusentes:absIds.slice(),
       listaSalvaEm:Date.now(),
       pagamentosJogo:{}
     };
-    await setDoc(doc(db,'games',nextGame.id),Object.assign({},cache.games.find(function(g){return g.id===nextGame.id;}),jogoPatch));
-    // Apaga TUDO do Firestore (não só o cache, pega todos os docs reais)
-    var snapConf=await getDocs(collection(db,'confirmed'));
-    var snapAbs=await getDocs(collection(db,'absent'));
-    var b=writeBatch(db);
-    snapConf.docs.forEach(function(d){b.delete(doc(db,'confirmed',d.id));});
-    snapAbs.docs.forEach(function(d){b.delete(doc(db,'absent',d.id));});
-    await b.commit();
-    // Reset seleção de pagamentos
-    _pagGameId=null;
-    if(window._pagUnsubscribe){try{window._pagUnsubscribe();}catch(e){}}
-    window._pagUnsubscribe=null;
-    _pagamentos={};
-    var sel=document.getElementById('pag-game-select');
-    if(sel)sel.value='';
-    renderPagamentos();
-    showToast('✅ Lista salva no jogo! Zerada para o próximo 🦁');
+    await setDoc(doc(db,'games',_pagGameId),Object.assign({},g,jogoPatch));
+    showToast('✅ Lista salva no jogo!');
   }catch(e){showToast('Erro ao salvar lista!');}
   showSync(false);
 };
@@ -2753,8 +2731,10 @@ window.salvarEdicaoJogo=async function(id){
 // ===== SALVAR LISTA NO JOGO =====
 window.salvarListaNoJogo=async function(gameId){
   if(!isAdmin){showToast('🔒 Apenas admin!');return;}
-  const conf=cache.players.filter(function(p){return cache.confirmed.includes(p.id);});
-  const abs=cache.players.filter(function(p){return cache.absent.includes(p.id);});
+  const confIds=(cache.confirmedByGame&&cache.confirmedByGame[gameId])||[];
+  const absIds=(cache.absentByGame&&cache.absentByGame[gameId])||[];
+  const conf=cache.players.filter(function(p){return confIds.includes(p.id);});
+  const abs=cache.players.filter(function(p){return absIds.includes(p.id);});
   const guests=(cache.guests||[]).filter(function(g){return g.gameId===gameId;});
   const total=conf.length+guests.length;
   const nomes=conf.slice(0,5).map(function(p){return p.nick||p.name.split(' ')[0];}).join(', ');
@@ -2766,24 +2746,20 @@ window.salvarListaNoJogo=async function(gameId){
     '✅ Confirmados: '+total+' jogador'+(total!==1?'es':'')+'\n'+
     (nomes?'👥 '+nomes+mais+'\n':'')+
     '❌ Ausentes: '+abs.length+'\n\n'+
-    '⚠️ A lista será salva e zerada para o próximo jogo.\n\nDeseja continuar?'
+    '⚠️ A lista será salva no jogo (os confirmados deste jogo permanecem registrados).\n\nDeseja continuar?'
   );
   if(!confirmou)return;
   showSync(true);
   try{
     var jogoPatch={
-      listaConfirmados:cache.confirmed.slice(),
-      listaAusentes:cache.absent.slice(),
+      listaConfirmados:confIds.slice(),
+      listaAusentes:absIds.slice(),
       listaSalvaEm:Date.now(),
       pagamentosJogo:{}
     };
     await setDoc(doc(db,'games',gameId),Object.assign({},g,jogoPatch));
-    var b=writeBatch(db);
-    cache.confirmed.forEach(function(id){b.delete(doc(db,'confirmed',id));});
-    cache.absent.forEach(function(id){b.delete(doc(db,'absent',id));});
-    await b.commit();
     closeModal('gameDetail');
-    showToast('✅ Lista salva no jogo! Zerada para o próximo 🦁');
+    showToast('✅ Lista salva no jogo!');
   }catch(e){showToast('Erro ao salvar lista!');}
   showSync(false);
 };

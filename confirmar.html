@@ -128,6 +128,14 @@ header{background:rgba(10,6,4,.97);border-bottom:1px solid var(--br);backdrop-fi
     <div style="font-family:'Cinzel',serif;font-size:1.1rem;font-weight:900;text-align:center;color:#F0C040;letter-spacing:1px;margin-bottom:4px">VOCÊ FOI CONVIDADO!</div>
     <div id="guestPopupSub" style="text-align:center;font-size:.78rem;color:#9A8060;margin-bottom:18px"></div>
 
+    <!-- CONVIDADOS JÁ CONFIRMADOS PARA ESTE JOGO -->
+    <div id="guestExistingWrap" style="display:none;margin-bottom:16px">
+      <div style="font-size:.62rem;color:#E040FB;letter-spacing:1.5px;margin-bottom:8px;font-weight:700">🎟️ CONVIDADOS NESTE JOGO</div>
+      <div id="guestExistingList"></div>
+      <div style="height:1px;background:rgba(201,168,76,.2);margin:14px 0"></div>
+      <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:8px;font-weight:700">➕ ADICIONAR NOVO CONVIDADO</div>
+    </div>
+
     <div id="guestFieldsWrap"></div>
 
     <button onclick="addGuestField()" style="width:100%;padding:9px;background:none;border:1px dashed rgba(171,71,188,.5);border-radius:8px;color:#CE93D8;font-size:.72rem;font-weight:700;letter-spacing:.5px;margin-top:4px;cursor:pointer">+ ADICIONAR OUTRO CONVIDADO</button>
@@ -229,6 +237,9 @@ async function init(){
   onSnapshot(collection(db,'guests'),snap=>{
     guests=snap.docs.map(d=>({id:d.id,...d.data()})).filter(g=>g.gameId===gameId);
     updateLista();
+    if(document.getElementById('guestOverlay')&&document.getElementById('guestOverlay').style.display==='flex'){
+      renderGuestExistingList();
+    }
   });
 }
 
@@ -353,11 +364,42 @@ var _guestFields=[{name:'',pos:''}];
 window.abrirPopupConvidado=function(){
   _guestFields=[{name:'',pos:''}];
   renderPopupConvidado();
+  renderGuestExistingList();
   const sub=document.getElementById('guestPopupSub');
   if(sub&&gameData){
     sub.textContent='Invictos FC vs '+(gameData.opponent||'?')+(gameData.date?' · '+fmtDate(gameData.date):'')+(gameData.time?' · '+gameData.time+'h':'');
   }
   document.getElementById('guestOverlay').style.display='flex';
+};
+
+function renderGuestExistingList(){
+  const wrap=document.getElementById('guestExistingWrap');
+  const list=document.getElementById('guestExistingList');
+  if(!wrap||!list)return;
+  if(!guests||guests.length===0){
+    wrap.style.display='none';
+    return;
+  }
+  wrap.style.display='block';
+  list.innerHTML=guests.map(g=>`
+    <div style="display:flex;align-items:center;gap:10px;background:rgba(171,71,188,.08);border:1px solid rgba(171,71,188,.25);border-radius:8px;padding:9px 12px;margin-bottom:6px">
+      <span style="font-size:1.1rem">🎟️</span>
+      <div style="flex:1">
+        <div style="font-size:.85rem;color:#F5E6C8;font-weight:600">${g.name}</div>
+        ${g.pos?`<div style="font-size:.68rem;color:#9A8060">${g.pos}</div>`:''}
+      </div>
+      <button onclick="removerConvidadoPublico('${g.id}','${(g.name||'').replace(/'/g,"\\'")}')" style="background:none;border:1px solid rgba(239,68,68,.4);color:#F87171;border-radius:6px;padding:6px 10px;font-size:.68rem;font-weight:700;cursor:pointer">REMOVER</button>
+    </div>
+  `).join('');
+}
+
+window.removerConvidadoPublico=async function(guestId,guestName){
+  if(!confirm('Remover '+(guestName||'convidado')+' deste jogo?'))return;
+  try{
+    await deleteDoc(doc(db,'guests',guestId));
+    showToast('❌ '+(guestName||'Convidado')+' removido do jogo');
+    setTimeout(()=>{renderGuestExistingList();},300);
+  }catch(e){showToast('Erro ao remover!');}
 };
 
 window.fecharPopupConvidado=function(){
@@ -414,18 +456,14 @@ window.togglePlayerStatus=async function(pid){
   const isAbs=absent.includes(pid);
   try{
     if(isConf){
-      // Confirmado -> Ausente
+      // Confirmado -> Ausente (somente coleções por jogo)
       await deleteDoc(doc(db,'confirmed_'+gameId,pid));
-      await deleteDoc(doc(db,'confirmed',pid));
       await setDoc(doc(db,'absent_'+gameId,pid),{id:pid});
-      await setDoc(doc(db,'absent',pid),{id:pid});
       showToast('❌ '+(p.nick||p.name)+' marcado como AUSENTE');
     }else{
-      // Ausente ou neutro -> Confirmado
+      // Ausente ou neutro -> Confirmado (somente coleções por jogo)
       await deleteDoc(doc(db,'absent_'+gameId,pid)).catch(()=>{});
-      await deleteDoc(doc(db,'absent',pid)).catch(()=>{});
       await setDoc(doc(db,'confirmed_'+gameId,pid),{id:pid});
-      await setDoc(doc(db,'confirmed',pid),{id:pid});
       showToast('✅ '+(p.nick||p.name)+' CONFIRMADO');
     }
   }catch(e){showToast('Erro ao atualizar!');}
