@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase-admin/app';
-import { credential } from 'firebase-admin';
+import pkg from 'firebase-admin';
+const { credential } = pkg;
 import { getFirestore } from 'firebase-admin/firestore';
 
 // ===== CONFIG via variáveis de ambiente (GitHub Secrets) =====
