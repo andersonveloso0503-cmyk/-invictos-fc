@@ -145,6 +145,27 @@ header{background:rgba(10,6,4,.97);border-bottom:1px solid var(--br);backdrop-fi
   </div>
 </div>
 
+<!-- POPUP ATLETA -->
+<div id="atletaOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:linear-gradient(160deg,#1a0e08,#0A0604);border:1px solid rgba(201,168,76,.4);border-radius:16px;padding:22px;box-shadow:0 8px 32px rgba(0,0,0,.6);max-width:380px;width:100%;max-height:85vh;overflow-y:auto">
+    <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#8B1A1A,#5C0E0E);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px">⚽</div>
+    <div style="font-family:'Cinzel',serif;font-size:1.05rem;font-weight:900;text-align:center;color:#F0C040;letter-spacing:1px;margin-bottom:10px">CONFIRMAR PRESENÇA</div>
+
+    <!-- CABEÇALHO DO JOGO -->
+    <div style="background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.3);border-radius:10px;padding:12px;margin-bottom:16px;text-align:center">
+      <div id="atletaGameVs" style="font-family:'Cinzel',serif;font-size:.95rem;font-weight:900;color:#F5E6C8;margin-bottom:4px"></div>
+      <div id="atletaGameMeta" style="font-size:.72rem;color:#9A8060"></div>
+    </div>
+
+    <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:8px;font-weight:700;text-align:center">QUEM É VOCÊ?</div>
+    <div id="atletaPlayerGrid" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-height:240px;overflow-y:auto"></div>
+
+    <button id="atletaBtnYes" onclick="confirmarAtletaEEnviar(true)" style="width:100%;padding:13px;border:none;border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:.8rem;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;cursor:pointer;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;opacity:.5" disabled><span>✅</span> VOU IR — AVISAR O GRUPO</button>
+    <button id="atletaBtnNo" onclick="confirmarAtletaEEnviar(false)" style="width:100%;padding:13px;border:1px solid rgba(239,68,68,.4);border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:.8rem;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;cursor:pointer;background:linear-gradient(135deg,#8B1A1A,#5C0E0E);color:#F5E6C8;opacity:.5" disabled><span>❌</span> NÃO VOU — AVISAR O GRUPO</button>
+    <button onclick="fecharPopupAtleta()" style="width:100%;padding:11px;background:none;border:none;color:#6b5a45;font-size:.75rem;margin-top:4px;cursor:pointer">cancelar</button>
+  </div>
+</div>
+
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import{getFirestore,doc,getDoc,setDoc,deleteDoc,onSnapshot,collection}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -272,27 +293,6 @@ function renderPage(){
 
     ${isEncerrado?`<div class="encerrado-badge">⛔ Este jogo já foi encerrado. Confirmações desativadas.</div>`:''}
 
-    <!-- LISTA DE JOGADORES -->
-    <div class="sh"><h2>TOQUE NO SEU NOME PARA CONFIRMAR/CANCELAR</h2><div class="sl"></div></div>
-    <div id="player-list">
-      ${players.map(p=>{
-        const av=p.photo?`<img src="${p.photo}" alt="">`:(p.emoji||'⚽');
-        const isConf=confirmed.includes(p.id);
-        const isAbs=absent.includes(p.id);
-        let cls='',status='⭕',title='Toque para confirmar';
-        if(isConf){cls='already-conf';status='✅';title='Confirmado — toque para cancelar';}
-        else if(isAbs){cls='cancelled';status='❌';title='Ausente — toque para confirmar';}
-        return`<div class="player-item ${cls}" onclick="togglePlayerStatus('${p.id}')" title="${title}">
-          <div class="player-avatar">${av}</div>
-          <div class="player-info">
-            <div class="player-name">${p.nick||p.name}</div>
-            <div class="player-pos">${p.pos||'—'}</div>
-          </div>
-          <div class="player-status">${status}</div>
-        </div>`;
-      }).join('')}
-    </div>
-
     <!-- LISTA CONFIRMADOS -->
     <div style="margin-top:14px">
       <div class="sh"><h2>LISTA DO JOGO</h2><div class="sl"></div></div>
@@ -306,10 +306,10 @@ function renderPage(){
       <div id="chips-wrap"></div>
     </div>
 
-    <!-- BOTAO ÚNICO ENVIAR LISTA -->
+    <!-- BOTOES -->
     ${!isEncerrado?`
     <div style="margin-top:18px">
-      <button class="btn-confirm" style="background:linear-gradient(135deg,#25D366,#128C7E)" onclick="enviarListaCompletaWA()"><span>📲</span> ENVIAR LISTA NO WHATSAPP</button>
+      <button class="btn-confirm" style="background:linear-gradient(135deg,#8B1A1A,#5C0E0E)" onclick="abrirPopupAtleta()"><span>⚽</span> CONFIRMAR OU CANCELAR PRESENÇA (ATLETA)</button>
       <div style="text-align:center;margin:10px 0 6px;font-size:.7rem;color:var(--tm)">Não é jogador do elenco?</div>
       <button class="btn-confirm" style="background:linear-gradient(135deg,#7B1FA2,#4A148C)" onclick="abrirPopupConvidado()"><span>🎟️</span> CONFIRMAR OU CANCELAR PRESENÇA (CONVIDADO)</button>
     </div>`:``}
@@ -334,28 +334,10 @@ function updateLista(){
     guests.map(g=>`<div class="conf-chip guest">🎟️ ${g.name}</div>`).join('')+
     absentPlayers.map(p=>`<div class="conf-chip absent">❌ ${p.nick||p.name.split(' ')[0]}</div>`).join('');
 
-  // atualiza ícones na lista de jogadores
-  players.forEach(p=>{
-    const items=document.querySelectorAll('.player-item');
-    items.forEach(item=>{
-      const nameEl=item.querySelector('.player-name');
-      if(!nameEl)return;
-      const pName=p.nick||p.name;
-      if(nameEl.textContent===pName){
-        const statusEl=item.querySelector('.player-status');
-        if(confirmed.includes(p.id)){
-          item.className='player-item already-conf';
-          if(statusEl)statusEl.textContent='✅';
-        }else if(absent.includes(p.id)){
-          item.className='player-item cancelled';
-          if(statusEl)statusEl.textContent='❌';
-        }else{
-          item.className='player-item';
-          if(statusEl)statusEl.textContent='⭕';
-        }
-      }
-    });
-  });
+  // Atualiza grid do popup de atleta, se estiver aberto
+  if(document.getElementById('atletaOverlay')&&document.getElementById('atletaOverlay').style.display==='flex'){
+    renderAtletaPlayerGrid();
+  }
 }
 
 // ===== POPUP CONVIDADO =====
@@ -444,56 +426,133 @@ window.salvarEEnviarConvidados=async function(){
     }
     showToast('🎟️ Convidado(s) salvo(s)!');
     fecharPopupConvidado();
-    // Aguarda um instante para o listener de guests atualizar
-    setTimeout(()=>{enviarListaCompletaWA();},600);
+    setTimeout(()=>{enviarAvisoConvidadosWA(validGuests);},400);
   }catch(e){showToast('Erro ao salvar!');}
 };
 
-window.togglePlayerStatus=async function(pid){
-  const p=players.find(x=>x.id===pid);
+function enviarAvisoConvidadosWA(novosConvidados){
+  function fmtD(d){if(!d)return'';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+  const nomes=novosConvidados.map(g=>g.name).join(', ');
+  let msg='🎟️ *'+nomes+(novosConvidados.length>1?' confirmaram':' confirmou')+' presença como convidado(a)!*\n\n';
+  msg+='🏆 Invictos FC vs '+(gameData.opponent||'?')+'\n';
+  if(gameData.date)msg+='📅 '+fmtD(gameData.date);
+  if(gameData.time)msg+=' · 🕐 '+gameData.time+'h';
+  if(gameData.date||gameData.time)msg+='\n';
+  if(gameData.location)msg+='📍 '+gameData.location+'\n';
+  msg+='\n⬇️ Ainda não confirmou? Clique aqui:\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
+  msg+='🦁 _Invictos FC — Nunca Rendidos!_';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+// ===== POPUP ATLETA =====
+var _atletaSelectedId=null;
+
+window.abrirPopupAtleta=function(){
+  _atletaSelectedId=null;
+  const vsEl=document.getElementById('atletaGameVs');
+  const metaEl=document.getElementById('atletaGameMeta');
+  if(vsEl)vsEl.textContent='🦁 Invictos FC × '+(gameData.opponent||'?');
+  if(metaEl){
+    let meta=[];
+    if(gameData.date)meta.push('📅 '+fmtDate(gameData.date));
+    if(gameData.time)meta.push('🕐 '+gameData.time+'h');
+    if(gameData.location)meta.push('📍 '+gameData.location);
+    metaEl.textContent=meta.join(' · ');
+  }
+  renderAtletaPlayerGrid();
+  document.getElementById('atletaOverlay').style.display='flex';
+};
+
+window.fecharPopupAtleta=function(){
+  document.getElementById('atletaOverlay').style.display='none';
+};
+
+function renderAtletaPlayerGrid(){
+  const grid=document.getElementById('atletaPlayerGrid');
+  if(!grid)return;
+  grid.innerHTML=players.map(p=>{
+    const isConf=confirmed.includes(p.id);
+    const isAbs=absent.includes(p.id);
+    const isSel=_atletaSelectedId===p.id;
+    const av=p.photo?`<img src="${p.photo}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0">`:`<div style="width:26px;height:26px;border-radius:50%;background:#2a1d10;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0">${p.emoji||'⚽'}</div>`;
+    let statusTag='';
+    if(isConf)statusTag='<span style="font-size:.65rem;color:#4ADE80;margin-left:auto">✅ confirmado</span>';
+    else if(isAbs)statusTag='<span style="font-size:.65rem;color:#F87171;margin-left:auto">❌ não vai</span>';
+    return `<div onclick="selecionarAtleta('${p.id}')" style="display:flex;align-items:center;gap:10px;background:${isSel?'rgba(201,168,76,.12)':'#15100a'};border:1px solid ${isSel?'#C9A84C':'rgba(201,168,76,.25)'};border-radius:8px;padding:9px 12px;cursor:pointer">
+      <div style="width:18px;height:18px;border-radius:50%;border:2px solid ${isSel?'#C9A84C':'rgba(201,168,76,.4)'};background:${isSel?'#C9A84C':'none'};flex-shrink:0;display:flex;align-items:center;justify-content:center">${isSel?'<div style="width:8px;height:8px;border-radius:50%;background:#0A0604"></div>':''}</div>
+      ${av}
+      <div><div style="font-size:.85rem;font-weight:600">${p.nick||p.name}</div><div style="font-size:.65rem;color:#9A8060">${p.pos||'—'}</div></div>
+      ${statusTag}
+    </div>`;
+  }).join('');
+}
+
+window.selecionarAtleta=function(pid){
+  _atletaSelectedId=pid;
+  renderAtletaPlayerGrid();
+  const btnYes=document.getElementById('atletaBtnYes');
+  const btnNo=document.getElementById('atletaBtnNo');
+  if(btnYes){btnYes.disabled=false;btnYes.style.opacity='1';}
+  if(btnNo){btnNo.disabled=false;btnNo.style.opacity='1';}
+};
+
+window.confirmarAtletaEEnviar=async function(vaiJogar){
+  if(!_atletaSelectedId){showToast('Escolha seu nome primeiro!');return;}
+  const p=players.find(x=>x.id===_atletaSelectedId);
   if(!p)return;
-  const isConf=confirmed.includes(pid);
-  const isAbs=absent.includes(pid);
   try{
-    if(isConf){
-      // Confirmado -> Ausente (somente coleções por jogo)
-      await deleteDoc(doc(db,'confirmed_'+gameId,pid));
-      await setDoc(doc(db,'absent_'+gameId,pid),{id:pid});
-      showToast('❌ '+(p.nick||p.name)+' marcado como AUSENTE');
-    }else{
-      // Ausente ou neutro -> Confirmado (somente coleções por jogo)
-      await deleteDoc(doc(db,'absent_'+gameId,pid)).catch(()=>{});
-      await setDoc(doc(db,'confirmed_'+gameId,pid),{id:pid});
+    if(vaiJogar){
+      await deleteDoc(doc(db,'absent_'+gameId,p.id)).catch(()=>{});
+      await setDoc(doc(db,'confirmed_'+gameId,p.id),{id:p.id});
       showToast('✅ '+(p.nick||p.name)+' CONFIRMADO');
+    }else{
+      await deleteDoc(doc(db,'confirmed_'+gameId,p.id)).catch(()=>{});
+      await setDoc(doc(db,'absent_'+gameId,p.id),{id:p.id});
+      showToast('❌ '+(p.nick||p.name)+' marcado como AUSENTE');
     }
+    // Atualiza arrays locais imediatamente (não espera o listener em tempo real)
+    confirmed=confirmed.filter(id=>id!==p.id);
+    absent=absent.filter(id=>id!==p.id);
+    if(vaiJogar)confirmed.push(p.id);
+    else absent.push(p.id);
+    updateLista();
+    fecharPopupAtleta();
+    enviarAvisoAtletaWA(p,vaiJogar);
   }catch(e){showToast('Erro ao atualizar!');}
 };
 
-window.enviarListaCompletaWA=function(){
+function enviarAvisoAtletaWA(p,vaiJogar){
+  function fmtD(d){if(!d)return'';const pp=d.split('-');return pp[2]+'/'+pp[1]+'/'+pp[0];}
+  const nome=p.nick||p.name;
+
+  // Monta a lista atualizada (o jogador que acabou de responder já reflete confirmed/absent atuais)
   const confPlayers=players.filter(x=>confirmed.includes(x.id));
   const absPlayers=players.filter(x=>absent.includes(x.id));
   const total=confPlayers.length+guests.length;
-  function fmtD(d){if(!d)return'';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+
   let lista='';
-  confPlayers.forEach((p,i)=>{lista+=(i+1)+'. ✅ '+(p.nick||p.name.split(' ')[0])+'\n';});
+  confPlayers.forEach((pl,i)=>{lista+=(i+1)+'. ✅ '+(pl.nick||pl.name.split(' ')[0])+'\n';});
   guests.forEach((g,i)=>{lista+=(confPlayers.length+i+1)+'. ✅ 🎟️ '+g.name+' (conv.)\n';});
-  absPlayers.forEach((p)=>{lista+='❌ '+(p.nick||p.name.split(' ')[0])+' (não vai)\n';});
-  let msg='⚽ *INVICTOS FC — LISTA DO JOGO*\n\n';
-  if(gameData){
-    msg+='🏆 Invictos FC vs '+gameData.opponent+'\n';
-    if(gameData.date)msg+='📅 '+fmtD(gameData.date);
-    if(gameData.time)msg+=' · 🕐 '+gameData.time+'h';
-    if(gameData.date||gameData.time)msg+='\n';
-    if(gameData.location)msg+='📍 '+gameData.location+'\n';
+  if(absPlayers.length>0){
+    lista+='\n';
+    absPlayers.forEach((pl)=>{lista+='❌ '+(pl.nick||pl.name.split(' ')[0])+' (não vai)\n';});
   }
+
+  let msg=vaiJogar
+    ? '✅ *'+nome+' vai jogar e confirmou presença!*\n\n'
+    : '❌ *'+nome+' avisou que NÃO vai jogar.*\n\n';
+  msg+='🏆 Invictos FC vs '+(gameData.opponent||'?')+'\n';
+  if(gameData.date)msg+='📅 '+fmtD(gameData.date);
+  if(gameData.time)msg+=' · 🕐 '+gameData.time+'h';
+  if(gameData.date||gameData.time)msg+='\n';
+  if(gameData.location)msg+='📍 '+gameData.location+'\n';
   msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
-  msg+='\n⬇️ *Clique aqui se irá jogar ou não irá jogar:*\n';
-  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n';
-  msg+='\n🎟️ *Convidado(a)? Confirme ou cancele aqui:*\n';
-  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'&tab=convidado\n\n';
+  msg+='\n⬇️ Ainda não confirmou? Clique aqui:\n';
+  msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-};
+}
 
 // Armazena mensagem pronta para o WA após confirmação
 var _pendingWAMsg=null;
