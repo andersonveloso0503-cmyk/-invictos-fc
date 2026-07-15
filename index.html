@@ -2389,17 +2389,16 @@ window.compartilharPagamentosWA=function(){
 };
 
 async function startListeners(){
-  onSnapshot(collection(db,'games'),snap=>{cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();setOnline(true);},()=>setOnline(false));
-  onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
-  onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
-  onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
-  // Listener de todos os jogos agendados (não só o próximo)
+  // Listener de jogos unificado — atualiza cache E cria listeners de confirmados
   cache.confirmedByGame={};
   cache.absentByGame={};
   window._gameConfListeners={};
   window._gameAbsListeners={};
 
-  onSnapshot(collection(db,'games'),async function(){
+  onSnapshot(collection(db,'games'),function(snap){
+    cache.games=snap.docs.map(d=>({id:d.id,...d.data()}));
+    saveLocal();renderAll();setOnline(true);
+
     const today=todayStr();
     const agendados=cache.games.filter(g=>g.status==='agendado'&&g.date>=today);
 
@@ -2427,7 +2426,11 @@ async function startListeners(){
         });
       }
     });
-  });
+  },()=>setOnline(false));
+
+  onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
+  onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
+  onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'guests'),function(snap){
     cache.guests=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     renderHome();
