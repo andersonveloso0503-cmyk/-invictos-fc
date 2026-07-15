@@ -2393,23 +2393,39 @@ async function startListeners(){
   onSnapshot(collection(db,'players'),snap=>{if(snap.docs.length===0){seedPlayers();}else{cache.players=snap.docs.map(d=>({id:d.id,...d.data()}));saveLocal();renderAll();}});
   onSnapshot(collection(db,'confirmed'),snap=>{cache.confirmed=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
   onSnapshot(collection(db,'absent'),snap=>{cache.absent=snap.docs.map(d=>d.id);saveLocal();renderConfirmList();});
-  // Listener do próximo jogo agendado para home + aba WhatsApp
+  // Listener de todos os jogos agendados (não só o próximo)
   cache.confirmedByGame={};
   cache.absentByGame={};
+  window._gameConfListeners={};
+  window._gameAbsListeners={};
+
   onSnapshot(collection(db,'games'),async function(){
     const today=todayStr();
-    const next=cache.games.filter(g=>g.status==='agendado'&&g.date>=today).sort((a,b)=>new Date(a.date)-new Date(b.date))[0];
-    if(!next)return;
-    if(window._homeConfUnsub) window._homeConfUnsub();
-    if(window._homeAbsUnsub) window._homeAbsUnsub();
-    window._homeConfUnsub=onSnapshot(collection(db,'confirmed_'+next.id),function(snap){
-      cache.confirmedByGame[next.id]=snap.docs.map(d=>d.id);
-      renderHome();
-      renderConfirmList();
+    const agendados=cache.games.filter(g=>g.status==='agendado'&&g.date>=today);
+
+    // Remove listeners de jogos que não são mais agendados
+    Object.keys(window._gameConfListeners).forEach(function(gid){
+      if(!agendados.find(g=>g.id===gid)){
+        try{window._gameConfListeners[gid]();}catch(e){}
+        try{window._gameAbsListeners[gid]();}catch(e){}
+        delete window._gameConfListeners[gid];
+        delete window._gameAbsListeners[gid];
+      }
     });
-    window._homeAbsUnsub=onSnapshot(collection(db,'absent_'+next.id),function(snap){
-      cache.absentByGame[next.id]=snap.docs.map(d=>d.id);
-      renderConfirmList();
+
+    // Adiciona listeners para novos jogos agendados
+    agendados.forEach(function(game){
+      if(!window._gameConfListeners[game.id]){
+        window._gameConfListeners[game.id]=onSnapshot(collection(db,'confirmed_'+game.id),function(snap){
+          cache.confirmedByGame[game.id]=snap.docs.map(d=>d.id);
+          renderHome();
+          renderConfirmList();
+        });
+        window._gameAbsListeners[game.id]=onSnapshot(collection(db,'absent_'+game.id),function(snap){
+          cache.absentByGame[game.id]=snap.docs.map(d=>d.id);
+          renderConfirmList();
+        });
+      }
     });
   });
   onSnapshot(collection(db,'guests'),function(snap){
