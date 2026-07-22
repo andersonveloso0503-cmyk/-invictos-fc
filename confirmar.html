@@ -442,7 +442,7 @@ function enviarAvisoConvidadosWA(novosConvidados){
   msg+='\n⬇️ Ainda não confirmou? Clique aqui:\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  abrirWhatsApp(msg);
 }
 
 // ===== POPUP ATLETA =====
@@ -497,10 +497,33 @@ window.selecionarAtleta=function(pid){
   if(btnNo){btnNo.disabled=false;btnNo.style.opacity='1';}
 };
 
+function abrirWhatsApp(msg){
+  const url='https://wa.me/?text='+encodeURIComponent(msg);
+  const a=document.createElement('a');
+  a.href=url;
+  a.target='_blank';
+  a.rel='noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>document.body.removeChild(a),200);
+}
+
 window.confirmarAtletaEEnviar=async function(vaiJogar){
   if(!_atletaSelectedId){showToast('Escolha seu nome primeiro!');return;}
   const p=players.find(x=>x.id===_atletaSelectedId);
   if(!p)return;
+
+  // Monta a mensagem ANTES do await para evitar bloqueio do Safari
+  confirmed=confirmed.filter(id=>id!==p.id);
+  absent=absent.filter(id=>id!==p.id);
+  if(vaiJogar)confirmed.push(p.id);
+  else absent.push(p.id);
+  const msg=montarMsgAtleta(p,vaiJogar);
+
+  // Abre WhatsApp imediatamente (ação síncrona — não bloqueada pelo Safari)
+  abrirWhatsApp(msg);
+
+  // Salva no Firebase em background
   try{
     if(vaiJogar){
       await deleteDoc(doc(db,'absent_'+gameId,p.id)).catch(()=>{});
@@ -511,26 +534,17 @@ window.confirmarAtletaEEnviar=async function(vaiJogar){
       await setDoc(doc(db,'absent_'+gameId,p.id),{id:p.id});
       showToast('❌ '+(p.nick||p.name)+' marcado como AUSENTE');
     }
-    // Atualiza arrays locais imediatamente (não espera o listener em tempo real)
-    confirmed=confirmed.filter(id=>id!==p.id);
-    absent=absent.filter(id=>id!==p.id);
-    if(vaiJogar)confirmed.push(p.id);
-    else absent.push(p.id);
     updateLista();
     fecharPopupAtleta();
-    enviarAvisoAtletaWA(p,vaiJogar);
-  }catch(e){showToast('Erro ao atualizar!');}
+  }catch(e){showToast('Erro ao salvar!');}
 };
 
-function enviarAvisoAtletaWA(p,vaiJogar){
+function montarMsgAtleta(p,vaiJogar){
   function fmtD(d){if(!d)return'';const pp=d.split('-');return pp[2]+'/'+pp[1]+'/'+pp[0];}
   const nome=p.nick||p.name;
-
-  // Monta a lista atualizada (o jogador que acabou de responder já reflete confirmed/absent atuais)
   const confPlayers=players.filter(x=>confirmed.includes(x.id));
   const absPlayers=players.filter(x=>absent.includes(x.id));
   const total=confPlayers.length+guests.length;
-
   let lista='';
   confPlayers.forEach((pl,i)=>{lista+=(i+1)+'. ✅ '+(pl.nick||pl.name.split(' ')[0])+'\n';});
   guests.forEach((g,i)=>{lista+=(confPlayers.length+i+1)+'. ✅ 🎟️ '+g.name+' (conv.)\n';});
@@ -538,10 +552,9 @@ function enviarAvisoAtletaWA(p,vaiJogar){
     lista+='\n';
     absPlayers.forEach((pl)=>{lista+='❌ '+(pl.nick||pl.name.split(' ')[0])+' (não vai)\n';});
   }
-
   let msg=vaiJogar
-    ? '✅ *'+nome+' vai jogar e confirmou presença!*\n\n'
-    : '❌ *'+nome+' avisou que NÃO vai jogar.*\n\n';
+    ?'✅ *'+nome+' vai jogar e confirmou presença!*\n\n'
+    :'❌ *'+nome+' avisou que NÃO vai jogar.*\n\n';
   msg+='🏆 Invictos FC vs '+(gameData.opponent||'?')+'\n';
   if(gameData.date)msg+='📅 '+fmtD(gameData.date);
   if(gameData.time)msg+=' · 🕐 '+gameData.time+'h';
@@ -551,8 +564,13 @@ function enviarAvisoAtletaWA(p,vaiJogar){
   msg+='\n⬇️ Ainda não confirmou? Clique aqui:\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+  return msg;
 }
+
+function enviarAvisoAtletaWA(p,vaiJogar){
+  abrirWhatsApp(montarMsgAtleta(p,vaiJogar));
+}
+
 
 // Armazena mensagem pronta para o WA após confirmação
 var _pendingWAMsg=null;
