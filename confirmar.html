@@ -498,11 +498,20 @@ window.selecionarAtleta=function(pid){
 };
 
 function abrirWhatsApp(msg){
-  const url='https://wa.me/?text='+encodeURIComponent(msg);
+  const texto=encodeURIComponent(msg);
+  // Tenta abrir o app do WhatsApp diretamente
+  const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isAndroid=/Android/i.test(navigator.userAgent);
+  let url;
+  if(isIOS||isAndroid){
+    // Protocolo direto abre o app instalado
+    url='whatsapp://send?text='+texto;
+  }else{
+    url='https://wa.me/?text='+texto;
+  }
   const a=document.createElement('a');
   a.href=url;
-  a.target='_blank';
-  a.rel='noopener';
+  a.target='_self';
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>document.body.removeChild(a),200);
