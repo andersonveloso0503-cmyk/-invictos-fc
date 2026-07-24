@@ -419,30 +419,54 @@ function renderPopupConvidado(){
 window.salvarEEnviarConvidados=async function(){
   const validGuests=_guestFields.filter(g=>g.name.trim());
   if(validGuests.length===0){showToast('Preencha pelo menos um nome!');return;}
+
+  // Adiciona convidados ao array local imediatamente
+  const novosIds=[];
+  validGuests.forEach(g=>{
+    const id='guest_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    novosIds.push({id,name:g.name.trim(),pos:g.pos.trim()});
+  });
+
+  // Monta e abre WhatsApp ANTES dos awaits (evita bloqueio iOS)
+  const allGuests=[...guests,...novosIds];
+  const msg=montarMsgConvidado(validGuests,allGuests);
+  abrirWhatsApp(msg);
+
+  // Salva no Firebase em background
   try{
-    for(const g of validGuests){
-      const id='guest_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-      await setDoc(doc(db,'guests',id),{id,gameId,name:g.name.trim(),pos:g.pos.trim(),createdAt:Date.now()});
+    for(const g of novosIds){
+      await setDoc(doc(db,'guests',g.id),{id:g.id,gameId,name:g.name,pos:g.pos,createdAt:Date.now()});
     }
     showToast('🎟️ Convidado(s) salvo(s)!');
     fecharPopupConvidado();
-    setTimeout(()=>{enviarAvisoConvidadosWA(validGuests);},400);
   }catch(e){showToast('Erro ao salvar!');}
 };
 
-function enviarAvisoConvidadosWA(novosConvidados){
+function montarMsgConvidado(novosConvidados,allGuests){
   function fmtD(d){if(!d)return'';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
   const nomes=novosConvidados.map(g=>g.name).join(', ');
+  const confPlayers=players.filter(x=>confirmed.includes(x.id));
+  const total=confPlayers.length+(allGuests||guests).length;
+
+  let lista='';
+  confPlayers.forEach((pl,i)=>{lista+=(i+1)+'. ✅ '+(pl.nick||pl.name.split(' ')[0])+'\n';});
+  (allGuests||guests).forEach((g,i)=>{lista+=(confPlayers.length+i+1)+'. ✅ 🎟️ '+g.name+' (conv.)\n';});
+
   let msg='🎟️ *'+nomes+(novosConvidados.length>1?' confirmaram':' confirmou')+' presença como convidado(a)!*\n\n';
   msg+='🏆 Invictos FC vs '+(gameData.opponent||'?')+'\n';
   if(gameData.date)msg+='📅 '+fmtD(gameData.date);
   if(gameData.time)msg+=' · 🕐 '+gameData.time+'h';
   if(gameData.date||gameData.time)msg+='\n';
   if(gameData.location)msg+='📍 '+gameData.location+'\n';
+  msg+='\n👥 *Confirmados ('+total+'):*\n'+lista;
   msg+='\n⬇️ Ainda não confirmou? Clique aqui:\n';
   msg+='🔗 https://andersonveloso0503-cmyk.github.io/-invictos-fc/confirmar.html?jogo='+gameId+'\n\n';
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
-  abrirWhatsApp(msg);
+  return msg;
+}
+
+function enviarAvisoConvidadosWA(novosConvidados){
+  abrirWhatsApp(montarMsgConvidado(novosConvidados,null));
 }
 
 // ===== POPUP ATLETA =====
