@@ -1198,10 +1198,15 @@ window.saveMvp=async function(gid){
 };
 window.adjScore=async function(id,side,delta){
   const g=cache.games.find(x=>x.id===id);if(!g)return;
-  if(side==='us')g.liveUs=Math.max(0,(g.liveUs||0)+delta);
-  else g.liveThem=Math.max(0,(g.liveThem||0)+delta);
-  document.getElementById('sd-us').textContent=g.liveUs||0;
-  document.getElementById('sd-them').textContent=g.liveThem||0;
+  if(side==='us'){
+    g.liveUs=Math.max(0,(g.liveUs!=null?g.liveUs:g.goalsUs||0)+delta);
+    g.goalsUs=g.liveUs;
+  }else{
+    g.liveThem=Math.max(0,(g.liveThem!=null?g.liveThem:g.goalsThem||0)+delta);
+    g.goalsThem=g.liveThem;
+  }
+  document.getElementById('sd-us').textContent=g.goalsUs||0;
+  document.getElementById('sd-them').textContent=g.goalsThem||0;
   try{await setDoc(doc(db,'games',id),g);}catch(e){}
 };
 
@@ -1210,11 +1215,11 @@ window.saveGameDetail=async function(id){
   showSync(true);
   try{
     const status=document.getElementById('gd-status').value;
-    const goalsUs=g.liveUs||parseInt(document.getElementById('sd-us').textContent)||0;
-    const goalsThem=g.liveThem||parseInt(document.getElementById('sd-them').textContent)||0;
+    const goalsUs=parseInt(document.getElementById('sd-us').textContent)||0;
+    const goalsThem=parseInt(document.getElementById('sd-them').textContent)||0;
     const scorers=document.getElementById('gd-scorers').value;
     const assists=document.getElementById('gd-assists').value;
-    await setDoc(doc(db,'games',id),{...g,status,goalsUs,goalsThem,scorers,assists});
+    await setDoc(doc(db,'games',id),{...g,status,goalsUs,goalsThem,liveUs:goalsUs,liveThem:goalsThem,scorers,assists});
     closeModal('gameDetail');showToast('Jogo atualizado! ✅');
   }catch(e){showToast('Erro ao salvar!');}
   showSync(false);
