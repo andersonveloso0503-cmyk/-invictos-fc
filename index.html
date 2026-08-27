@@ -551,6 +551,7 @@ nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(10,6,4,.9
       </div>
       <div class="fg"><label class="fl">Nº Camisa</label><input class="fi" id="p-number" type="number" min="1" max="99" placeholder="10"></div>
     </div>
+    <div class="fg"><label class="fl">📱 WhatsApp (com DDI, ex: 5551999990000)</label><input class="fi" id="p-phone" type="tel" placeholder="5551999990000"></div>
     <div class="fg"><label class="fl">Emoji</label><div id="emojiGrid" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px"></div></div>
     <button class="btn-sub" onclick="savePlayer()">ADICIONAR AO ELENCO</button>
     <button class="btn-can" onclick="closeModal('addPlayer')">CANCELAR</button>
@@ -1360,9 +1361,9 @@ window.savePlayer=async function(){
   showSync(true);
   try{
     const id='pl'+Date.now();
-    await setDoc(doc(db,'players',id),{id,name,nick:document.getElementById('p-nick').value.trim(),pos:document.getElementById('p-pos').value,number:document.getElementById('p-number').value,emoji:window._selEmoji||'⚽',photo:window._pPhotoData||null,photos:[]});
+    await setDoc(doc(db,'players',id),{id,name,nick:document.getElementById('p-nick').value.trim(),pos:document.getElementById('p-pos').value,number:document.getElementById('p-number').value,phone:(document.getElementById('p-phone')?document.getElementById('p-phone').value.trim():''),emoji:window._selEmoji||'⚽',photo:window._pPhotoData||null,photos:[]});
     closeModal('addPlayer');showToast('Jogador adicionado! 👤');
-    document.getElementById('p-name').value='';document.getElementById('p-nick').value='';document.getElementById('p-number').value='';
+    document.getElementById('p-name').value='';document.getElementById('p-nick').value='';document.getElementById('p-number').value='';if(document.getElementById('p-phone'))document.getElementById('p-phone').value='';
     window._pPhotoData=null;document.getElementById('pPhotoPrev').style.display='none';document.getElementById('pPhotoEmoji').style.display='';
   }catch(e){showToast('Erro ao salvar!');}
   showSync(false);
@@ -1381,7 +1382,14 @@ window.showPlayerDetail=function(id){
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
       ${[['Gols',s.goals],['Ass.',s.assists],['Jogos',s.games],['G/J',s.games>0?Math.round((s.goals/s.games)*10)/10:0]].map(([l,v])=>`<div style="background:var(--s2);border:1px solid var(--br);border-radius:7px;padding:8px 4px;text-align:center"><div style="font-family:'Cinzel',serif;font-size:1.25rem;color:var(--gb)">${v}</div><div style="font-size:.52rem;color:var(--tm);text-transform:uppercase">${l}</div></div>`).join('')}
     </div>
-    <button class="btn-can admin-only" style="color:#F87171;border-color:rgba(239,68,68,.3)" onclick="deletePlayer('${id}')">🗑️ Remover Jogador</button>`;
+    <button class="btn-can admin-only" style="color:#F87171;border-color:rgba(239,68,68,.3)" onclick="deletePlayer('${id}')">🗑️ Remover Jogador</button>
+    ${isAdmin?`<div style="margin-top:10px;background:var(--s2);border:1px solid var(--br);border-radius:9px;padding:10px">
+      <div style="font-size:.6rem;color:var(--g);letter-spacing:2px;margin-bottom:6px">📱 WHATSAPP</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="fi" id="edit-phone-${id}" type="tel" value="${p.phone||''}" placeholder="5551999990000" style="flex:1;padding:8px">
+        <button onclick="salvarTelefone('${id}')" style="padding:8px 12px;background:var(--gd);border:none;border-radius:8px;color:#fff;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap">💾 SALVAR</button>
+      </div>
+    </div>`:''}`;
   var pdContent=document.getElementById('playerDetailContent');
   if(pdContent){
     var posBtn=document.createElement('button');
@@ -3039,6 +3047,21 @@ window.enviarRelatorioFinanceiroWA=function(){
   msg+='🦁 _Invictos FC — Nunca Rendidos!_';
 
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+};
+
+// ===== SALVAR TELEFONE DO JOGADOR =====
+window.salvarTelefone=async function(pid){
+  const input=document.getElementById('edit-phone-'+pid);
+  if(!input)return;
+  const phone=input.value.trim().replace(/\D/g,'');
+  const p=cache.players.find(x=>x.id===pid);
+  if(!p)return;
+  showSync(true);
+  try{
+    await setDoc(doc(db,'players',pid),{...p,phone});
+    showToast('📱 Telefone salvo!');
+  }catch(e){showToast('Erro ao salvar!');}
+  showSync(false);
 };
 
 init();
