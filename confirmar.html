@@ -158,7 +158,11 @@ header{background:rgba(10,6,4,.97);border-bottom:1px solid var(--br);backdrop-fi
     </div>
 
     <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:8px;font-weight:700;text-align:center">QUEM É VOCÊ?</div>
-    <div id="atletaPlayerGrid" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-height:240px;overflow-y:auto"></div>
+    <div id="atletaPlayerGrid" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;max-height:240px;overflow-y:auto"></div>
+    <div id="atletaPhoneWrap" style="display:none;margin-bottom:12px">
+      <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:5px;font-weight:700">📱 SEU WHATSAPP (para receber avisos)</div>
+      <input class="fi" type="tel" id="atletaPhoneInput" placeholder="5551999990000" style="padding:10px">
+    </div>
 
     <button id="atletaBtnYes" onclick="confirmarAtletaEEnviar(true)" style="width:100%;padding:13px;border:none;border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:.8rem;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;cursor:pointer;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;opacity:.5" disabled><span>✅</span> VOU IR — AVISAR O GRUPO</button>
     <button id="atletaBtnNo" onclick="confirmarAtletaEEnviar(false)" style="width:100%;padding:13px;border:1px solid rgba(239,68,68,.4);border-radius:10px;font-family:'Cinzel',serif;font-weight:700;font-size:.8rem;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;cursor:pointer;background:linear-gradient(135deg,#8B1A1A,#5C0E0E);color:#F5E6C8;opacity:.5" disabled><span>❌</span> NÃO VOU — AVISAR O GRUPO</button>
@@ -341,7 +345,7 @@ function updateLista(){
 }
 
 // ===== POPUP CONVIDADO =====
-var _guestFields=[{name:'',pos:''}];
+var _guestFields=[{name:'',pos:'',phone:''}];
 
 window.abrirPopupConvidado=function(){
   _guestFields=[{name:'',pos:''}];
@@ -389,7 +393,7 @@ window.fecharPopupConvidado=function(){
 };
 
 window.addGuestField=function(){
-  _guestFields.push({name:'',pos:''});
+  _guestFields.push({name:'',pos:'',phone:''});
   renderPopupConvidado();
 };
 
@@ -411,7 +415,9 @@ function renderPopupConvidado(){
       <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:5px;font-weight:700">${_guestFields.length>1?'NOME DO CONVIDADO '+(i+1):'SEU NOME'}</div>
       <input class="fi" value="${g.name}" placeholder="Ex: Rafael Silva" oninput="updateGuestField(${i},'name',this.value)" style="margin-bottom:10px">
       <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:5px;font-weight:700">POSIÇÃO</div>
-      <input class="fi" value="${g.pos}" placeholder="Ex: Atacante" oninput="updateGuestField(${i},'pos',this.value)">
+      <input class="fi" value="${g.pos}" placeholder="Ex: Atacante" oninput="updateGuestField(${i},'pos',this.value)" style="margin-bottom:10px">
+      <div style="font-size:.62rem;color:#C9A84C;letter-spacing:1.5px;margin-bottom:5px;font-weight:700">📱 WHATSAPP <span style="color:#F87171">*</span></div>
+      <input class="fi" type="tel" value="${g.phone||''}" placeholder="5551999990000" oninput="updateGuestField(${i},'phone',this.value)" style="margin-bottom:0">
     </div>
   `).join('');
 }
@@ -420,11 +426,15 @@ window.salvarEEnviarConvidados=async function(){
   const validGuests=_guestFields.filter(g=>g.name.trim());
   if(validGuests.length===0){showToast('Preencha pelo menos um nome!');return;}
 
+  // Validar telefone obrigatório
+  const semTelefone=validGuests.find(g=>!g.phone||!g.phone.trim());
+  if(semTelefone){showToast('📱 WhatsApp é obrigatório!');return;}
+
   // Adiciona convidados ao array local imediatamente
   const novosIds=[];
   validGuests.forEach(g=>{
     const id='guest_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-    novosIds.push({id,name:g.name.trim(),pos:g.pos.trim()});
+    novosIds.push({id,name:g.name.trim(),pos:g.pos.trim(),phone:g.phone.trim().replace(/\D/g,'')});
   });
 
   // Monta e abre WhatsApp ANTES dos awaits (evita bloqueio iOS)
@@ -435,7 +445,9 @@ window.salvarEEnviarConvidados=async function(){
   // Salva no Firebase em background
   try{
     for(const g of novosIds){
-      await setDoc(doc(db,'guests',g.id),{id:g.id,gameId,name:g.name,pos:g.pos,createdAt:Date.now()});
+      await setDoc(doc(db,'guests',g.id),{id:g.id,gameId,name:g.name,pos:g.pos,phone:g.phone,createdAt:Date.now()});
+      // Envia mensagem personalizada via Evolution API
+      if(g.phone) enviarMsgPersonalizadaConvidado(g);
     }
     showToast('🎟️ Convidado(s) salvo(s)!');
     fecharPopupConvidado();
@@ -519,6 +531,18 @@ window.selecionarAtleta=function(pid){
   const btnNo=document.getElementById('atletaBtnNo');
   if(btnYes){btnYes.disabled=false;btnYes.style.opacity='1';}
   if(btnNo){btnNo.disabled=false;btnNo.style.opacity='1';}
+  // Mostra campo telefone se jogador não tiver phone cadastrado
+  const p=players.find(x=>x.id===pid);
+  const phoneWrap=document.getElementById('atletaPhoneWrap');
+  const phoneInput=document.getElementById('atletaPhoneInput');
+  if(phoneWrap&&p){
+    if(!p.phone){
+      phoneWrap.style.display='block';
+      if(phoneInput)phoneInput.value='';
+    }else{
+      phoneWrap.style.display='none';
+    }
+  }
 };
 
 function abrirWhatsApp(msg){
@@ -562,7 +586,13 @@ window.confirmarAtletaEEnviar=async function(vaiJogar){
       await deleteDoc(doc(db,'absent_'+gameId,p.id)).catch(()=>{});
       await setDoc(doc(db,'confirmed_'+gameId,p.id),{id:p.id});
       showToast('✅ '+(p.nick||p.name)+' CONFIRMADO');
-      // Envia mensagem personalizada via Evolution API
+      // Salva telefone se digitou e não tinha cadastrado
+      const phoneInput=document.getElementById('atletaPhoneInput');
+      if(phoneInput&&phoneInput.value.trim()&&!p.phone){
+        const phone=phoneInput.value.trim().replace(/\D/g,'');
+        p.phone=phone;
+        setDoc(doc(db,'players',p.id),{...p,phone}).catch(()=>{});
+      }
       if(p.phone) enviarMsgPersonalizada(p,true);
     }else{
       await deleteDoc(doc(db,'confirmed_'+gameId,p.id)).catch(()=>{});
@@ -584,6 +614,35 @@ const FRASES_ENGRACADAS=[
   '🦁 Rugindo de longe já! O adversário tá pedindo pra sair... 😂',
   '⚡ Energia lá em cima! Guarda um gol pra mim no bolso! ⚽😎',
 ];
+
+async function enviarMsgPersonalizadaConvidado(g){
+  function fmtD(d){if(!d)return'';const pp=d.split('-');return pp[2]+'/'+pp[1]+'/'+pp[0];}
+  const nome=g.name.split(' ')[0];
+  const frase=FRASES_ENGRACADAS[Math.floor(Math.random()*FRASES_ENGRACADAS.length)];
+  let msg='🦁 *Olá, '+nome+'! Invictos FC aqui!*\n\n';
+  msg+='🎟️ Sua presença como convidado foi confirmada! Muito obrigado!\n\n';
+  msg+=frase+'\n\n';
+  if(gameData){
+    msg+='📋 *DETALHES DO JOGO:*\n';
+    msg+='⚽ Invictos FC vs '+(gameData.opponent||'?')+'\n';
+    if(gameData.date)msg+='📅 '+fmtD(gameData.date);
+    if(gameData.time)msg+=' · 🕐 '+gameData.time+'h';
+    if(gameData.date||gameData.time)msg+='\n';
+    if(gameData.location)msg+='📍 '+gameData.location+'\n';
+    if(gameData.address)msg+='📌 '+gameData.address+'\n';
+    if(gameData.address)msg+='🗺️ https://maps.google.com/?q='+encodeURIComponent(gameData.address)+'\n';
+  }
+  msg+='\n⚠️ *Caso não possa comparecer*, por favor avise no grupo com antecedência!\n';
+  msg+='\n🦁 _Invictos FC — Nunca Rendidos!_';
+  try{
+    await fetch('https://evolution-api-production-7c15.up.railway.app/message/sendText/voleitche',{
+      method:'POST',
+      headers:{'apikey':'833e1efbd3e377537bf10ce7aa61120401d1e420bea7dbd7698b6ca1904379de','Content-Type':'application/json'},
+      body:JSON.stringify({number:g.phone,text:msg})
+    });
+    console.log('✅ Mensagem enviada para convidado '+nome);
+  }catch(e){console.error('Erro ao enviar para convidado:',e);}
+}
 
 async function enviarMsgPersonalizada(p,vaiJogar){
   function fmtD(d){if(!d)return'';const pp=d.split('-');return pp[2]+'/'+pp[1]+'/'+pp[0];}
