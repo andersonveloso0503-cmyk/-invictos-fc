@@ -272,7 +272,37 @@ async function main() {
     }
   }
 
-    console.log('--- Concluído ---');
+  
+  // ===== LEMBRETE 1 DIA ANTES ÀS 19H BRT (22H UTC) =====
+  const horasUTC=now.getUTCHours();
+  for(const g of jogos){
+    const gameDateTime=parseGameDateTime(g.date,g.time);
+    if(!gameDateTime)continue;
+    const diffMs=gameDateTime.getTime()-now.getTime();
+    const diffH=diffMs/(1000*60*60);
+    if(diffH>=22&&diffH<=26&&horasUTC>=22&&horasUTC<=23&&!g.lembreteEnviado){
+      console.log(`⏰ Enviando lembrete para jogo vs ${g.opponent}...`);
+      const confSnap=await db.collection('confirmed_'+g.id).get();
+      const confIds=confSnap.docs.map(d=>d.id);
+      const playersSnap=await db.collection('players').get();
+      const players=playersSnap.docs.map(d=>({id:d.id,...d.data()}));
+      const confirmados=players.filter(p=>confIds.includes(p.id));
+      const guestsSnap=await db.collection('guests').where('gameId','==',g.id).get();
+      const convidados=guestsSnap.docs.map(d=>({id:d.id,...d.data()}));
+      const msgLembrete=`⚽ *LEMBRETE — JOGO AMANHÃ!*\n\n🏆 Invictos FC vs ${g.opponent}\n📅 ${fmtDate(g.date)} · 🕐 ${g.time||''}h\n📍 ${g.location||''}${g.address?'\n📌 '+g.address:''}\n\n⚠️ Não esqueça! Te esperamos no campo! 🦁\n\n⚠️ _Esta é uma mensagem automática. Por favor, não responda._\n🦁 _Invictos FC — Nunca Rendidos!_`;
+      for(const p of [...confirmados,...convidados]){
+        if(p.phone){
+          try{
+            await fetch(EVOLUTION_API_URL+'/message/sendText/invictos',{method:'POST',headers:{'apikey':EVOLUTION_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({number:p.phone,text:msgLembrete})});
+            console.log('✅ Lembrete para '+(p.nick||p.name||p.name));
+          }catch(e){console.error('Erro:',e);}
+        }
+      }
+      await db.collection('games').doc(g.id).update({lembreteEnviado:true});
+    }
+  }
+
+  console.log('--- Concluído ---');
 }
 
 main().catch(err => {
