@@ -605,6 +605,40 @@ window.confirmarAtletaEEnviar=async function(vaiJogar){
   }catch(e){showToast('Erro ao salvar!');}
 };
 
+// ===== ENVIO SEGURO COM DELAY =====
+const EVOLUTION_URL='https://evolution-api-production-7c15.up.railway.app';
+const EVOLUTION_KEY='833e1efbd3e377537bf10ce7aa61120401d1e420bea7dbd7698b6ca1904379de';
+const EVOLUTION_INSTANCE='invictos';
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// Delay aleatório entre 8 e 15 segundos entre mensagens
+function delayAleatorio(){
+  const min=8000,max=15000;
+  return sleep(Math.floor(Math.random()*(max-min+1))+min);
+}
+
+async function enviarComSeguranca(numero,texto){
+  try{
+    // Delay antes de enviar
+    await delayAleatorio();
+    const resp=await fetch(EVOLUTION_URL+'/message/sendText/'+EVOLUTION_INSTANCE,{
+      method:'POST',
+      headers:{'apikey':EVOLUTION_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({number:numero,text:texto})
+    });
+    const data=await resp.json();
+    if(resp.ok){
+      console.log('✅ Mensagem enviada para '+numero);
+    }else{
+      console.warn('⚠️ Erro ao enviar para '+numero+':', data);
+    }
+    return data;
+  }catch(e){
+    console.error('❌ Erro ao enviar para '+numero+':',e);
+  }
+}
+
 const FRASES_ENGRACADAS=[
   '🔥 Tá chegando com tudo! O adversário já tá tremendo nas bases! 😂',
   '⚽ Chegando com fome de jogo! Deixa o adversário rezar... 🙏😂',
@@ -636,12 +670,7 @@ async function enviarMsgPersonalizadaConvidado(g){
   msg+='\n⚠️ _Esta é uma mensagem automática. Por favor, não responda._';
   msg+='\n🦁 _Invictos FC — Nunca Rendidos!_';
   try{
-    await fetch('https://evolution-api-production-7c15.up.railway.app/message/sendText/invictos',{
-      method:'POST',
-      headers:{'apikey':'833e1efbd3e377537bf10ce7aa61120401d1e420bea7dbd7698b6ca1904379de','Content-Type':'application/json'},
-      body:JSON.stringify({number:g.phone,text:msg})
-    });
-    console.log('✅ Mensagem enviada para convidado '+nome);
+    await enviarComSeguranca(g.phone,msg);
   }catch(e){console.error('Erro ao enviar para convidado:',e);}
 }
 
@@ -665,12 +694,7 @@ async function enviarMsgPersonalizada(p,vaiJogar){
   msg+='\n🦁 _Invictos FC — Nunca Rendidos!_';
 
   try{
-    await fetch('https://evolution-api-production-7c15.up.railway.app/message/sendText/invictos',{
-      method:'POST',
-      headers:{'apikey':'833e1efbd3e377537bf10ce7aa61120401d1e420bea7dbd7698b6ca1904379de','Content-Type':'application/json'},
-      body:JSON.stringify({number:p.phone,text:msg})
-    });
-    console.log('✅ Mensagem enviada para '+nome+' ('+p.phone+')');
+    await enviarComSeguranca(p.phone,msg);
   }catch(e){
     console.error('Erro ao enviar mensagem:',e);
   }
