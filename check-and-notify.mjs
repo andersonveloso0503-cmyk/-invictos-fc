@@ -182,6 +182,29 @@ async function enviarImagemGrupo(buffer, caption) {
   return data;
 }
 
+// ===== ENVIO SEGURO COM DELAY =====
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function delayAleatorio(){
+  const min=10000,max=20000; // 10-20 segundos entre mensagens
+  return sleep(Math.floor(Math.random()*(max-min+1))+min);
+}
+
+async function enviarMsgSegura(numero,texto){
+  await delayAleatorio();
+  try{
+    const resp=await fetch(`${EVOLUTION_API_URL}/message/sendText/invictos`,{
+      method:'POST',
+      headers:{'apikey':EVOLUTION_API_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({number:numero,text:texto})
+    });
+    const data=await resp.json();
+    console.log('✅ Enviado para '+numero);
+    return data;
+  }catch(e){
+    console.error('❌ Erro ao enviar para '+numero+':',e);
+  }
+}
+
 // ===== PUSH ONESIGNAL =====
 async function sendPush(title, message, gameId) {
   const resp = await fetch('https://onesignal.com/api/v1/notifications', {
@@ -292,10 +315,7 @@ async function main() {
       const msgLembrete=`⚽ *LEMBRETE — JOGO AMANHÃ!*\n\n🏆 Invictos FC vs ${g.opponent}\n📅 ${fmtDate(g.date)} · 🕐 ${g.time||''}h\n📍 ${g.location||''}${g.address?'\n📌 '+g.address:''}\n\n⚠️ Não esqueça! Te esperamos no campo! 🦁\n\n⚠️ _Esta é uma mensagem automática. Por favor, não responda._\n🦁 _Invictos FC — Nunca Rendidos!_`;
       for(const p of [...confirmados,...convidados]){
         if(p.phone){
-          try{
-            await fetch(EVOLUTION_API_URL+'/message/sendText/invictos',{method:'POST',headers:{'apikey':EVOLUTION_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({number:p.phone,text:msgLembrete})});
-            console.log('✅ Lembrete para '+(p.nick||p.name||p.name));
-          }catch(e){console.error('Erro:',e);}
+          await enviarMsgSegura(p.phone,msgLembrete);
         }
       }
       await db.collection('games').doc(g.id).update({lembreteEnviado:true});
