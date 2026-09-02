@@ -192,7 +192,7 @@ function delayAleatorio(){
 async function enviarMsgSegura(numero,texto){
   await delayAleatorio();
   try{
-    const resp=await fetch(`${EVOLUTION_API_URL}/message/sendText/invictos`,{
+    const resp=await fetch(`${EVOLUTION_API_URL}/message/sendText/voleitche`,{
       method:'POST',
       headers:{'apikey':EVOLUTION_API_KEY,'Content-Type':'application/json'},
       body:JSON.stringify({number:numero,text:texto})
