@@ -303,7 +303,7 @@ async function main() {
     if(!gameDateTime)continue;
     const diffMs=gameDateTime.getTime()-now.getTime();
     const diffH=diffMs/(1000*60*60);
-    if(diffH>=22&&diffH<=26&&horasUTC>=22&&horasUTC<=23&&!g.lembreteEnviado){
+    if(diffH>=20&&diffH<=28&&horasUTC>=21&&horasUTC<=23&&!g.lembreteEnviado){
       console.log(`⏰ Enviando lembrete para jogo vs ${g.opponent}...`);
       const confSnap=await db.collection('confirmed_'+g.id).get();
       const confIds=confSnap.docs.map(d=>d.id);
