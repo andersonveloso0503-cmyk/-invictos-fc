@@ -295,6 +295,7 @@ async function main() {
     }
   }
 
+  }
   
   // ===== LEMBRETE 1 DIA ANTES ÀS 19H BRT (22H UTC) =====
   const horasUTC=now.getUTCHours();
