@@ -96,6 +96,7 @@ header{background:rgba(10,6,4,.97);border-bottom:1px solid var(--br);backdrop-fi
 /* ENCERRADO */
 .encerrado-badge{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;font-size:.75rem;color:#F87171;text-align:center;margin-bottom:12px;letter-spacing:1px}
 </style>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 </head>
 <body>
 
@@ -187,6 +188,29 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
 const WA_GROUP='https://chat.whatsapp.com/HnVzicypPW96beA2qOco7F';
+
+// ===== ONESIGNAL PUSH =====
+window.OneSignalDeferred=window.OneSignalDeferred||[];
+window.OneSignalDeferred.push(async function(OneSignal){
+  await OneSignal.init({
+    appId:'91f7895a-adee-4918-83dc-91f7ebf85eda',
+    allowLocalhostAsSecureOrigin:true
+  });
+});
+
+async function pedirPushESalvarTag(playerName){
+  try{
+    window.OneSignalDeferred=window.OneSignalDeferred||[];
+    window.OneSignalDeferred.push(async function(OneSignal){
+      const perm=await OneSignal.Notifications.permission;
+      if(!perm) await OneSignal.Notifications.requestPermission();
+      try{
+        await OneSignal.User.addTag('jogador',playerName||'desconhecido');
+        await OneSignal.User.addTag('time','invictos');
+      }catch(e){}
+    });
+  }catch(e){}
+}
 
 let gameId=null;
 let gameData=null;
@@ -595,6 +619,7 @@ window.confirmarAtletaEEnviar=async function(vaiJogar){
         setDoc(doc(db,'players',p.id),{...p,phone}).catch(()=>{});
       }
       if(p.phone) enviarMsgPersonalizada(p,true);
+      pedirPushESalvarTag(p.nick||p.name);
     }else{
       await deleteDoc(doc(db,'confirmed_'+gameId,p.id)).catch(()=>{});
       await setDoc(doc(db,'absent_'+gameId,p.id),{id:p.id});
